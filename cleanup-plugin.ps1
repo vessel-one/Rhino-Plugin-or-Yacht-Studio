@@ -83,6 +83,30 @@ if (Test-Path $sourcePath) {
     Write-Host "   📦 Path: $destPath" -ForegroundColor Gray
     Write-Host "   📦 Size: $($newPlugin.Length) bytes" -ForegroundColor Gray
     Write-Host "   📅 Built: $($newPlugin.LastWriteTime)" -ForegroundColor Gray
+    
+    # CRITICAL: Remove RhinoCommon.dll if present
+    # RhinoCommon.dll conflicts with Rhino's built-in version and prevents updates
+    Write-Host ""
+    Write-Host "   ⚠️  Checking for conflicting DLLs..." -ForegroundColor Yellow
+    $pluginDir = Split-Path $destPath
+    $rhinoCommon = Join-Path $pluginDir "RhinoCommon.dll"
+    $eto = Join-Path $pluginDir "Eto.dll"
+    
+    $removed = @()
+    if (Test-Path $rhinoCommon) {
+        Remove-Item $rhinoCommon -Force
+        $removed += "RhinoCommon.dll"
+    }
+    if (Test-Path $eto) {
+        Remove-Item $eto -Force
+        $removed += "Eto.dll"
+    }
+    
+    if ($removed.Count -gt 0) {
+        Write-Host "   ✅ Removed conflicting DLLs: $($removed -join ', ')" -ForegroundColor Green
+    } else {
+        Write-Host "   ✅ No conflicting DLLs found" -ForegroundColor Green
+    }
 } else {
     Write-Host "   ❌ Source not found: $sourcePath" -ForegroundColor Red
     exit 1

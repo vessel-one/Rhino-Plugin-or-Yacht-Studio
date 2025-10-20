@@ -46,16 +46,18 @@ namespace VesselStudioSimplePlugin
         {
             try
             {
-                // Register the panel
+                // Register the panel - convert bitmap to icon
+                var icon = System.Drawing.Icon.FromHandle(VesselStudioToolbarPanel.PanelIcon.GetHicon());
+                
                 Panels.RegisterPanel(
                     VesselStudioSimplePlugin.Instance,
                     typeof(VesselStudioToolbarPanel),
                     "Vessel Studio",
-                    VesselStudioToolbarPanel.PanelIcon,
+                    icon,
                     PanelType.System
                 );
 
-                RhinoApp.WriteLine("Vessel Studio panel registered. Use Panels menu to show it.");
+                RhinoApp.WriteLine("Vessel Studio panel registered. Use 'VesselStudioShowToolbar' command to show it.");
             }
             catch (Exception ex)
             {

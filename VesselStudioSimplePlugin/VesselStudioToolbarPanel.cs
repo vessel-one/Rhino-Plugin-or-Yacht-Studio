@@ -239,10 +239,13 @@ namespace VesselStudioSimplePlugin
             }
         }
 
-        public override void OnShown(ShowPanelEventArgs e)
+        protected override void OnVisibleChanged(EventArgs e)
         {
-            base.OnShown(e);
-            UpdateStatus();
+            base.OnVisibleChanged(e);
+            if (this.Visible)
+            {
+                UpdateStatus();
+            }
         }
 
         protected override void Dispose(bool disposing)

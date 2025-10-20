@@ -31,4 +31,9 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
 
+  <!-- Post-build step to create .rhp file from .dll -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)$(ProjectName).rhp" />
+  </Target>
+
 </Project>

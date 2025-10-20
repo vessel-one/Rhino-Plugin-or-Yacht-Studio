@@ -89,6 +89,7 @@ namespace VesselStudioSimplePlugin
     /// <summary>
     /// Command to open the Vessel Studio toolbar panel
     /// </summary>
+    [System.Runtime.InteropServices.Guid("B6C7D8E9-F0A1-2B3C-4D5E-6F7A8B9C0D1E")]
     public class VesselStudioShowToolbarCommand : Command
     {
         public override string EnglishName => "VesselStudioShowToolbar";

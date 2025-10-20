@@ -37,6 +37,7 @@ namespace VesselStudioSimplePlugin
     /// <summary>
     /// Help command that opens Vessel Studio documentation
     /// </summary>
+    [System.Runtime.InteropServices.Guid("D8E9F0A1-B2C3-4D5E-6F7A-8B9C0D1E2F3A")]
     public class VesselStudioHelpCommand : Command
     {
         public override string EnglishName => "VesselStudioHelp";

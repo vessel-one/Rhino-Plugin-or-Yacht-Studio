@@ -36,8 +36,14 @@ namespace VesselStudioSimplePlugin
                 // Initialize the API client
                 ApiClient = new VesselStudioApiClient();
                 
-                RhinoApp.WriteLine("Vessel Studio Simple Plugin loaded successfully!");
-                RhinoApp.WriteLine("Use 'VesselStudioCapture' command to capture and upload viewport screenshots");
+                // Add menu and toolbar
+                VesselStudioMenu.AddMenu();
+                VesselStudioToolbar.AddToolbar();
+                
+                RhinoApp.WriteLine("Vessel Studio Plugin loaded successfully!");
+                RhinoApp.WriteLine("• Use 'Vessel Studio' menu for all commands");
+                RhinoApp.WriteLine("• Use 'VesselStudioShowToolbar' to show the toolbar panel");
+                RhinoApp.WriteLine("• Or use commands: VesselSetApiKey, VesselCapture, VesselQuickCapture");
                 
                 return LoadReturnCode.Success;
             }
@@ -53,6 +59,10 @@ namespace VesselStudioSimplePlugin
         /// </summary>
         protected override void OnShutdown()
         {
+            // Clean up menu and toolbar
+            VesselStudioMenu.RemoveMenu();
+            VesselStudioToolbar.RemoveToolbar();
+            
             ApiClient?.Dispose();
             _instance = null;
         }

@@ -189,14 +189,10 @@ Types: VesselCapture
   ↓
 Dialog appears:
   "Send to which project?"
-  [Dropdown: Currently Open Projects]
+  [Dropdown: My Yacht Projects]
   
   "Image name (optional):"
   [Input: e.g., "Hull Profile View"]
-  
-  "Add to:"
-  ○ Project Gallery (publicly visible)
-  ● Private Workspace (only visible to you)
   
   [Cancel] [Capture & Upload]
   ↓
@@ -208,7 +204,7 @@ Uploads to Vessel One API
   ↓
 User switches back to browser
   ↓
-New image appears in project gallery (real-time via WebSocket)
+New image appears in project gallery (real-time via Firestore)
 ```
 
 **Benefits:**
@@ -256,8 +252,6 @@ public class VesselStudioSettings
     public string ApiKey { get; set; }
     public string LastProjectId { get; set; }
     public string LastProjectName { get; set; }
-    public bool UploadToGallery { get; set; } = true; // vs private workspace
-    public bool AddWatermark { get; set; } = false;
 }
 ```
 
@@ -372,7 +366,6 @@ export async function POST(
   const formData = await request.formData();
   const imageFile = formData.get('image') as File;
   const imageName = formData.get('name') as string || `Rhino Capture ${Date.now()}`;
-  const visibility = formData.get('visibility') as string || 'gallery'; // 'gallery' or 'private'
   const metadata = JSON.parse(formData.get('metadata') as string || '{}');
 
   // Verify user has access to project
@@ -390,7 +383,7 @@ export async function POST(
   const imageId = nanoid();
   const imageBuffer = await imageFile.arrayBuffer();
   const bucket = storage.bucket();
-  const filePath = `projects/${params.projectId}/rhino-captures/${imageId}.png`;
+  const filePath = `projects/${params.projectId}/gallery/${imageId}.png`;
   const file = bucket.file(filePath);
 
   await file.save(Buffer.from(imageBuffer), {
@@ -405,20 +398,17 @@ export async function POST(
     },
   });
 
-  // Make publicly accessible if gallery image
-  if (visibility === 'gallery') {
-    await file.makePublic();
-  }
+  // Make publicly accessible (or handle via signed URLs based on project privacy)
+  await file.makePublic();
 
   const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-  // Save to Firestore
+  // Save to Firestore gallery collection
   const imageDoc = {
     id: imageId,
     projectId: params.projectId,
     name: imageName,
     url: publicUrl,
-    visibility, // 'gallery' or 'private'
     source: 'rhino-plugin',
     uploadedBy: authResult.userId,
     uploadedAt: new Date(),
@@ -431,10 +421,9 @@ export async function POST(
     },
   };
 
-  const collection = visibility === 'gallery' ? 'gallery' : 'workspace';
   await db.collection('projects')
     .doc(params.projectId)
-    .collection(collection)
+    .collection('gallery')
     .doc(imageId)
     .set(imageDoc);
 
@@ -445,7 +434,7 @@ export async function POST(
     success: true,
     imageId,
     imageUrl: publicUrl,
-    message: `Uploaded to ${projectData.name} ${visibility}`,
+    message: `Uploaded to ${projectData.name} gallery`,
   });
 }
 ```
@@ -543,7 +532,6 @@ namespace VesselStudioSimplePlugin
             string projectId,
             byte[] imageBytes,
             string imageName,
-            string visibility,
             Dictionary<string, object> metadata)
         {
             try
@@ -551,7 +539,6 @@ namespace VesselStudioSimplePlugin
                 var content = new MultipartFormDataContent();
                 content.Add(new ByteArrayContent(imageBytes), "image", "capture.png");
                 content.Add(new StringContent(imageName), "name");
-                content.Add(new StringContent(visibility), "visibility");
                 content.Add(new StringContent(JsonConvert.SerializeObject(metadata)), "metadata");
 
                 var response = await httpClient.PostAsync(
@@ -621,8 +608,7 @@ namespace VesselStudioSimplePlugin
                     doc,
                     apiClient,
                     dialog.SelectedProjectId,
-                    dialog.ImageName,
-                    dialog.Visibility
+                    dialog.ImageName
                 );
 
                 if (captureResult.success)
@@ -651,8 +637,7 @@ namespace VesselStudioSimplePlugin
             RhinoDoc doc,
             VesselStudioApiClient apiClient,
             string projectId,
-            string imageName,
-            string visibility)
+            string imageName)
         {
             try
             {
@@ -689,7 +674,6 @@ namespace VesselStudioSimplePlugin
                     projectId,
                     imageBytes,
                     imageName,
-                    visibility,
                     metadata
                 );
 
@@ -708,13 +692,11 @@ namespace VesselStudioSimplePlugin
     {
         private DropDown projectDropdown;
         private TextBox nameTextBox;
-        private RadioButtonList visibilityRadio;
         private List<VesselProject> projects;
         
         public string SelectedProjectId { get; private set; }
         public string SelectedProjectName { get; private set; }
         public string ImageName { get; private set; }
-        public string Visibility { get; private set; }
 
         public CaptureDialog(VesselStudioApiClient apiClient, VesselStudioSettings settings)
         {
@@ -750,18 +732,6 @@ namespace VesselStudioSimplePlugin
                 Text = $"Rhino Capture {DateTime.Now:HH:mm:ss}"
             };
 
-            // Visibility options
-            visibilityRadio = new RadioButtonList
-            {
-                Orientation = Orientation.Vertical,
-                Items =
-                {
-                    new ListItem { Text = "Project Gallery (public)", Key = "gallery" },
-                    new ListItem { Text = "Private Workspace (only you)", Key = "private" }
-                },
-                SelectedIndex = settings.UploadToGallery ? 0 : 1
-            };
-
             // Layout
             Content = new TableLayout
             {
@@ -773,8 +743,6 @@ namespace VesselStudioSimplePlugin
                     new TableRow(projectDropdown),
                     new TableRow(new Label { Text = "Image name (optional):" }),
                     new TableRow(nameTextBox),
-                    new TableRow(new Label { Text = "Add to:" }),
-                    new TableRow(visibilityRadio),
                 }
             };
 
@@ -794,7 +762,6 @@ namespace VesselStudioSimplePlugin
                 ImageName = string.IsNullOrWhiteSpace(nameTextBox.Text) 
                     ? $"Rhino Capture {DateTime.Now:HH:mm:ss}"
                     : nameTextBox.Text;
-                Visibility = visibilityRadio.SelectedKey;
                 
                 Close(DialogResult.Ok);
             };
@@ -883,7 +850,6 @@ namespace VesselStudioSimplePlugin
                     settings.LastProjectId,
                     imageBytes,
                     imageName,
-                    settings.UploadToGallery ? "gallery" : "private",
                     metadata
                 );
 

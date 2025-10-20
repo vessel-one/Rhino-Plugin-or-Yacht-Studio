@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
+    <AssemblyName>VesselStudioPlugin</AssemblyName>
+    <RootNamespace>VesselStudioPlugin</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>false</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors>NU1701</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <!-- Rhino Plugin Properties -->
+  <PropertyGroup>
+    <Title>Vessel Studio Plugin</Title>
+    <Description>Rhino plugin for capturing viewport screenshots and syncing with Vessel Studio projects</Description>
+    <Company>Vessel One</Company>
+    <Product>Vessel Studio Rhino Plugin</Product>
+    <Copyright>Copyright © 2025 Vessel One</Copyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <PluginVersion>1.0.0</PluginVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- RhinoCommon SDK for Rhino plugin development -->
+    <PackageReference Include="RhinoCommon" Version="8.0.23346.16351" />
+    <!-- Eto.Forms for cross-platform UI -->
+    <PackageReference Include="Eto.Forms" Version="2.7.3" />
+    <!-- System.Net.Http for API communication -->
+    <PackageReference Include="System.Net.Http" Version="4.3.4" Condition="'$(TargetFramework)' == 'net48'" />
+    <!-- System.Text.Json for JSON serialization -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+
+</Project>

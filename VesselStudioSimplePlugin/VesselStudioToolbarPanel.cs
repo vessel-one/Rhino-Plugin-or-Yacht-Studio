@@ -23,23 +23,35 @@ namespace VesselStudioSimplePlugin
         {
             get
             {
-                // Create a simple icon (32x32) for the panel
+                // Create a distinctive icon (32x32) with "VS" text
                 var icon = new Bitmap(32, 32);
                 using (var g = Graphics.FromImage(icon))
                 {
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    g.Clear(Color.Transparent);
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
                     
-                    // Draw a camera icon
+                    // Background - Vessel One blue
                     using (var brush = new SolidBrush(Color.FromArgb(70, 130, 180)))
                     {
-                        g.FillRectangle(brush, 4, 10, 24, 16);
-                        g.FillEllipse(brush, 20, 6, 8, 8);
+                        g.FillRectangle(brush, 0, 0, 32, 32);
                     }
                     
-                    using (var pen = new Pen(Color.White, 2))
+                    // Draw "VS" text in white
+                    using (var font = new Font("Arial", 14, FontStyle.Bold))
+                    using (var textBrush = new SolidBrush(Color.White))
                     {
-                        g.DrawEllipse(pen, 10, 14, 8, 8);
+                        var format = new StringFormat
+                        {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center
+                        };
+                        g.DrawString("VS", font, textBrush, new RectangleF(0, 0, 32, 32), format);
+                    }
+                    
+                    // Add subtle border
+                    using (var pen = new Pen(Color.FromArgb(50, 90, 130), 2))
+                    {
+                        g.DrawRectangle(pen, 1, 1, 30, 30);
                     }
                 }
                 return icon;

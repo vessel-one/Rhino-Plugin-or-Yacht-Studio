@@ -47,7 +47,8 @@ namespace VesselStudioSimplePlugin
             try
             {
                 // Get the panel icon from centralized icon manager
-                var icon = VesselStudioIcons.GetPanelIcon();
+                // Use standard light mode icon - Rhino will handle dark mode automatically
+                var icon = VesselStudioIcons.GetPanelIcon(false);
                 
                 Panels.RegisterPanel(
                     VesselStudioSimplePlugin.Instance,
@@ -57,12 +58,12 @@ namespace VesselStudioSimplePlugin
                     PanelType.System
                 );
 
-                RhinoApp.WriteLine("Vessel Studio panel registered. Use 'VesselStudioShowToolbar' command to show it.");
-                RhinoApp.WriteLine("Panel icon: " + (icon != null ? "Loaded" : "NULL"));
+                RhinoApp.WriteLine("✓ Vessel Studio panel registered with icon");
+                RhinoApp.WriteLine("  Use 'VesselStudioShowToolbar' command to show the panel");
             }
             catch (Exception ex)
             {
-                RhinoApp.WriteLine($"Error registering panel: {ex.Message}");
+                RhinoApp.WriteLine($"❌ Error registering panel: {ex.Message}");
             }
         }
 

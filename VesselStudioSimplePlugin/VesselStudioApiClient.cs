@@ -213,63 +213,61 @@ namespace VesselStudioSimplePlugin
             try
             {
                 RhinoApp.WriteLine($"[Upload] Starting upload to project: {projectId}");
-                RhinoApp.WriteLine($"[Upload] Image size: {imageBytes.Length / 1024} KB");
-                RhinoApp.WriteLine($"[Upload] Image name: {imageName ?? "(empty)"}");
+                RhinoApp.WriteLine($"[Upload] Image size: {imageBytes.Length / 1024:F2} KB");
+                RhinoApp.WriteLine($"[Upload] Image filename: {imageName ?? "capture.png"}");
                 
-                // Create multipart form data
-                using (var content = new MultipartFormDataContent())
+                // Create multipart form data - HttpClient will auto-set Content-Type with boundary
+                using (var formData = new MultipartFormDataContent())
                 {
-                    // Add image file - use "file" field name (standard for multipart uploads)
-                    var imageContent = new ByteArrayContent(imageBytes);
-                    imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-                    content.Add(imageContent, "file", "capture.png");
-                    RhinoApp.WriteLine($"[Upload] Added field: file (image/png, {imageBytes.Length} bytes)");
+                    // Add file - REQUIRED field (backend expects "file" field name)
+                    var fileContent = new ByteArrayContent(imageBytes);
+                    fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+                    
+                    // Use the provided image name as filename, or default to "capture.png"
+                    var filename = string.IsNullOrWhiteSpace(imageName) ? "capture.png" : $"{imageName}.png";
+                    formData.Add(fileContent, "file", filename);
+                    RhinoApp.WriteLine($"[Upload] ✓ Added file field: {filename} ({imageBytes.Length} bytes, image/png)");
 
-                    // Add image name as separate field
-                    if (!string.IsNullOrEmpty(imageName))
-                    {
-                        content.Add(new StringContent(imageName, Encoding.UTF8), "name");
-                        RhinoApp.WriteLine($"[Upload] Added field: name = {imageName}");
-                    }
-
-                    // Add metadata fields individually (not as JSON)
-                    if (metadata != null)
+                    // Add metadata fields as individual string fields (all optional)
+                    if (metadata != null && metadata.Count > 0)
                     {
                         RhinoApp.WriteLine($"[Upload] Adding {metadata.Count} metadata fields:");
                         foreach (var kvp in metadata)
                         {
                             var value = kvp.Value?.ToString() ?? "";
-                            content.Add(new StringContent(value, Encoding.UTF8), kvp.Key);
-                            RhinoApp.WriteLine($"[Upload]   - {kvp.Key} = {value}");
+                            formData.Add(new StringContent(value), kvp.Key);
+                            RhinoApp.WriteLine($"[Upload]   ✓ {kvp.Key} = {value}");
                         }
                     }
 
-                    // Upload to specific project
-                    var uploadUrl = $"{BaseUrl}/api/rhino/projects/{projectId}/upload";
-                    RhinoApp.WriteLine($"[Upload] Uploading to: {uploadUrl}");
+                    // POST to upload endpoint - Content-Type header is automatically set by MultipartFormDataContent
+                    var uploadUrl = $"/api/rhino/projects/{projectId}/upload";
+                    RhinoApp.WriteLine($"[Upload] POST {BaseUrl}{uploadUrl}");
+                    RhinoApp.WriteLine($"[Upload] Authorization: Bearer {_apiKey.Substring(0, 12)}...");
                     
-                    var response = await _httpClient.PostAsync($"/api/rhino/projects/{projectId}/upload", content);
+                    var response = await _httpClient.PostAsync(uploadUrl, formData);
                     var responseText = await response.Content.ReadAsStringAsync();
                     
-                    RhinoApp.WriteLine($"[Upload] Response status: {(int)response.StatusCode} {response.StatusCode}");
-                    RhinoApp.WriteLine($"[Upload] Response body: {responseText}");
-
+                    RhinoApp.WriteLine($"[Upload] Response: {(int)response.StatusCode} {response.StatusCode}");
+                    
                     if (response.IsSuccessStatusCode)
                     {
+                        RhinoApp.WriteLine($"[Upload] ✅ Success: {responseText}");
                         var result = JsonConvert.DeserializeObject<dynamic>(responseText);
                         return new UploadResult 
                         { 
                             Success = true, 
-                            Message = result.message?.ToString() ?? "Uploaded successfully",
-                            Url = result.imageUrl?.ToString() ?? ""
+                            Message = "Upload successful",
+                            Url = result.url?.ToString() ?? ""
                         };
                     }
                     else
                     {
+                        RhinoApp.WriteLine($"[Upload] ❌ Failed: {responseText}");
                         return new UploadResult 
                         { 
                             Success = false, 
-                            Message = $"Upload failed: {response.StatusCode} - {responseText}" 
+                            Message = $"{response.StatusCode}: {responseText}" 
                         };
                     }
                 }

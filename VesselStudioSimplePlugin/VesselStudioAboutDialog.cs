@@ -61,7 +61,7 @@ namespace VesselStudioSimplePlugin
             var subtitleLabel = new Label
             {
                 Text = "Rhino Plugin",
-                Location = new Point(padding, 52),
+                Location = new Point(padding, 58),
                 Width = contentWidth,
                 AutoSize = true,
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),

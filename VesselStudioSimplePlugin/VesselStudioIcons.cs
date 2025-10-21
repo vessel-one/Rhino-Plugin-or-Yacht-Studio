@@ -41,12 +41,33 @@ namespace VesselStudioSimplePlugin
                 bitmap = CreateFallbackIconBitmap(32);
             }
 
-            // Convert bitmap to icon
-            IntPtr hIcon = bitmap.GetHicon();
-            _panelIcon = Icon.FromHandle(hIcon);
+            try
+            {
+                // Convert bitmap to icon - must use Bitmap.MakeTransparent() first for proper alpha
+                bitmap.MakeTransparent(bitmap.GetPixel(0, 0));
+                IntPtr hIcon = bitmap.GetHicon();
+                try
+                {
+                    _panelIcon = Icon.FromHandle(hIcon);
+                }
+                finally
+                {
+                    // Clean up the handle to avoid COM errors
+                    DestroyIcon(hIcon);
+                }
+            }
+            catch
+            {
+                // If icon conversion fails, create a simple icon from bitmap
+                _panelIcon = Icon.FromHandle(bitmap.GetHicon());
+            }
             
             return _panelIcon;
         }
+        
+        // Import DestroyIcon from user32.dll to properly clean up icon handles
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern bool DestroyIcon(IntPtr handle);
 
         /// <summary>
         /// Get a toolbar button bitmap at specified size
@@ -158,10 +179,22 @@ namespace VesselStudioSimplePlugin
         /// </summary>
         public static void SaveIconToDisk(string path)
         {
-            var icon = GetPanelIcon();
-            using (var stream = new FileStream(path, FileMode.Create))
+            try
             {
-                icon.Save(stream);
+                // Get the bitmap instead of the icon to avoid COM issues
+                var bitmap = GetToolbarBitmap(32, false);
+                
+                // Save as PNG if path ends with .ico (ICO format can be problematic)
+                if (path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
+                {
+                    path = path.Replace(".ico", ".png");
+                }
+                
+                bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to save icon: {ex.Message}", ex);
             }
         }
     }

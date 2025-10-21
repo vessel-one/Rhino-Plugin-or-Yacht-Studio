@@ -67,23 +67,23 @@ This feature uses existing project structure with new dist/ staging folder:
 
 ### Authentication
 
-- [ ] T020 [US1] Run `yak login` and complete OAuth flow via browser
-- [ ] T021 [US1] Verify OAuth token saved to %APPDATA%\McNeel\yak.yml
+- [X] T020 [US1] Run `yak login` and complete OAuth flow via browser
+- [X] T021 [US1] Verify OAuth token saved to %APPDATA%\McNeel\yak.yml
 
 ### Test Server Validation
 
-- [ ] T022 [US1] Push package to test server: `yak push vesselstudio-1.0.0-rh8_0-win.yak --source https://test.yak.rhino3d.com`
-- [ ] T023 [US1] Verify successful push (no errors in command output)
-- [ ] T024 [US1] Search test server: `yak search --source https://test.yak.rhino3d.com --all vesselstudio`
-- [ ] T025 [US1] Verify package appears in search results with correct name and version
-- [ ] T026 [US1] Verify manifest metadata correct in search results (description, authors, keywords)
+- [X] T022 [US1] Push package to test server: `yak push vesselstudio-1.0.0-rh8_0-win.yak --source https://test.yak.rhino3d.com`
+- [X] T023 [US1] Verify successful push (no errors in command output)
+- [X] T024 [US1] Search test server: `yak search --source https://test.yak.rhino3d.com --all vesselstudio`
+- [X] T025 [US1] Verify package appears in search results with correct name and version
+- [X] T026 [US1] Verify manifest metadata correct in search results (description, authors, keywords)
 
 ### Production Publishing
 
-- [ ] T027 [US1] Push package to production: `yak push vesselstudio-1.0.0-rh8_0-win.yak`
-- [ ] T028 [US1] Verify successful push to production (no errors in command output)
-- [ ] T029 [US1] Search production server: `yak search vesselstudio`
-- [ ] T030 [US1] Verify package appears in production search results
+- [X] T027 [US1] Push package to production: `yak push vesselstudio-1.0.0-rh8_0-win.yak`
+- [X] T028 [US1] Verify successful push to production (no errors in command output)
+- [X] T029 [US1] Search production server: `yak search vesselstudio`
+- [X] T030 [US1] Verify package appears in production search results
 
 **Checkpoint**: Package published to yak.rhino3d.com - ready for user installation testing (User Story 2)
 

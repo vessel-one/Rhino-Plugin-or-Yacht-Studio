@@ -29,7 +29,7 @@ namespace VesselStudioSimplePlugin
     public class VesselStudioApiClient : IDisposable
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://vesselstudio.io/api";
+        private const string BaseUrl = "https://vesselstudio.io";
         private string _apiKey;
 
         public VesselStudioApiClient()
@@ -77,10 +77,10 @@ namespace VesselStudioSimplePlugin
 
             try
             {
-                RhinoApp.WriteLine($"Attempting connection to: {BaseUrl}/rhino/validate");
+                RhinoApp.WriteLine($"Attempting connection to: {BaseUrl}/api/rhino/validate");
                 RhinoApp.WriteLine($"Authorization: Bearer {_apiKey.Substring(0, Math.Min(10, _apiKey.Length))}...");
                 
-                var response = await _httpClient.PostAsync("/rhino/validate", null);
+                var response = await _httpClient.PostAsync("/api/rhino/validate", null);
                 
                 RhinoApp.WriteLine($"Response status: {(int)response.StatusCode} {response.StatusCode}");
                 
@@ -164,7 +164,7 @@ namespace VesselStudioSimplePlugin
 
             try
             {
-                var response = await _httpClient.GetAsync("/rhino/projects");
+                var response = await _httpClient.GetAsync("/api/rhino/projects");
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
@@ -228,7 +228,7 @@ namespace VesselStudioSimplePlugin
                     content.Add(new StringContent(metadataJson, Encoding.UTF8, "application/json"), "metadata");
 
                     // Upload to specific project
-                    var response = await _httpClient.PostAsync($"/rhino/projects/{projectId}/upload", content);
+                    var response = await _httpClient.PostAsync($"/api/rhino/projects/{projectId}/upload", content);
                     var responseText = await response.Content.ReadAsStringAsync();
 
                     if (response.IsSuccessStatusCode)
@@ -302,7 +302,7 @@ namespace VesselStudioSimplePlugin
         {
             try
             {
-                var response = await _httpClient.GetAsync("/plugin/ping");
+                var response = await _httpClient.GetAsync("/api/plugin/ping");
                 return response.IsSuccessStatusCode;
             }
             catch

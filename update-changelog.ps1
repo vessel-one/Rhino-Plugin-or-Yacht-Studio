@@ -22,7 +22,7 @@ function Get-GitChanges {
     }
 }
 
-function Analyze-ChangeImpact {
+function Get-ChangeImpact {
     param([array]$Changes)
     
     $categories = @{
@@ -68,7 +68,7 @@ function Analyze-ChangeImpact {
     return $categories
 }
 
-function Suggest-ChangelogUpdate {
+function New-ChangelogSuggestion {
     param([hashtable]$Categories)
     
     $suggestions = @()
@@ -134,7 +134,7 @@ if ($Analyze -or $Suggest) {
     Write-Host "Found $($changes.Count) commits" -ForegroundColor White
     Write-Host ""
     
-    $categories = Analyze-ChangeImpact -Changes $changes
+    $categories = Get-ChangeImpact -Changes $changes
     
     Write-Host "Change Breakdown:" -ForegroundColor Cyan
     Write-Host "  Major Features: $($categories.MajorFeature.Count)" -ForegroundColor $(if ($categories.MajorFeature.Count -gt 0) { "Green" } else { "Gray" })
@@ -146,7 +146,7 @@ if ($Analyze -or $Suggest) {
     Write-Host ""
     
     if ($Suggest) {
-        $result = Suggest-ChangelogUpdate -Categories $categories
+        $result = New-ChangelogSuggestion -Categories $categories
         
         if ($result.RequiresUpdate) {
             Write-Host "RECOMMENDATION: Changelog update needed" -ForegroundColor Red

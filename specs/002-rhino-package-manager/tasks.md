@@ -61,9 +61,9 @@ This feature uses existing project structure with new dist/ staging folder:
 
 ### Package Building
 
-- [ ] T017 [US1] Run `yak build` in dist/ to create vesselstudio-1.0.0-rh8_0-win.yak
-- [ ] T018 [US1] Verify .yak file created with correct filename format (name-version-distribution_tag.yak)
-- [ ] T019 [US1] Inspect .yak contents to verify all required files present (rhp, dll, manifest, icon)
+- [X] T017 [US1] Run `yak build` in dist/ to create vesselstudio-1.0.0-rh8_0-win.yak (WORKAROUND: Manual ZIP creation)
+- [X] T018 [US1] Verify .yak file created with correct filename format (name-version-distribution_tag.yak)
+- [X] T019 [US1] Inspect .yak contents to verify all required files present (rhp, dll, manifest, icon)
 
 ### Authentication
 

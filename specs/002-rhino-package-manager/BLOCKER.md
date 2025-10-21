@@ -1,12 +1,51 @@
-# BLOCKER: Yak CLI Dependency Issue
+# BLOCKER: Yak CLI Dependency Issue - PARTIALLY RESOLVED
 
-**Status**: 🚨 **BLOCKED** - Cannot proceed with MVP (User Story 1: Package Building)  
+**Status**: 🟡 **PARTIALLY UNBLOCKED** - Package building complete, authentication still required  
 **Created**: October 21, 2025  
-**Impact**: High - Blocks package creation and publication
+**Updated**: October 21, 2025 (Found workaround + standalone CLI)  
+**Impact**: Medium - Package created, needs authentication for publishing
 
 ---
 
-## Problem Statement
+## ✅ RESOLUTION FOUND
+
+### Workarounds Implemented
+
+1. **Manual .yak Creation** (WORKING)
+   - Created vesselstudio-1.0.0-rh8_0-win.yak as ZIP archive using PowerShell
+   - Verified contents: rhp (57KB), dll (712KB), manifest.yml (543B), icon.png (1KB)
+   - File size: 300,606 bytes (294 KB)
+   - **Status**: ✅ Package building complete (T017-T019)
+
+2. **Standalone Yak CLI** (WORKING)
+   - Downloaded from: https://files.mcneel.com/yak/tools/0.13.0/yak.exe
+   - Version: Yak 0.13.0 (0.13.9082.17812)
+   - Location: `$env:TEMP\yak-standalone.exe`
+   - **Status**: ✅ Functional (no DocoptNet error)
+
+### Next Steps for Publishing
+
+**Authentication Required** (T020-T021):
+```powershell
+# Option A: Interactive OAuth
+& "$env:TEMP\yak-standalone.exe" login
+# Opens browser for Rhino Accounts authentication
+
+# Option B: CI/Automated (if you have a token)
+$env:YAK_TOKEN = "your-token-here"
+& "$env:TEMP\yak-standalone.exe" push vesselstudio-1.0.0-rh8_0-win.yak --source https://test.yak.rhino3d.com
+```
+
+**Publishing Workflow**:
+1. Authenticate once: `yak login` (token saved for ~30 days)
+2. Test push: `yak push <package> --source https://test.yak.rhino3d.com`
+3. Verify: `yak search --source https://test.yak.rhino3d.com --all vesselstudio`
+4. Production push: `yak push <package>`
+5. Verify: `yak search vesselstudio`
+
+---
+
+## Original Problem Statement (ARCHIVED)
 
 The Yak CLI (`C:\Program Files\Rhino 8\System\Yak.exe`) is missing the `DocoptNet.dll` dependency, causing all yak commands to fail:
 

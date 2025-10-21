@@ -240,7 +240,7 @@ namespace VesselStudioSimplePlugin
         {
             Text = "Capture to Vessel Studio";
             Width = 420;
-            Height = 230;
+            Height = 280;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
@@ -293,7 +293,14 @@ namespace VesselStudioSimplePlugin
             {
                 Location = new Point(20, 135),
                 Width = 360,
-                Text = $"Rhino Capture {DateTime.Now:HH:mm:ss}"
+                Text = ""
+            };
+            nameTextBox.TextChanged += (s, e) =>
+            {
+                // Enable capture button only if name is entered and projects loaded
+                okButton.Enabled = !string.IsNullOrWhiteSpace(nameTextBox.Text) && 
+                                  projectComboBox.Enabled && 
+                                  projectComboBox.Items.Count > 0;
             };
             Controls.Add(nameTextBox);
 
@@ -301,17 +308,25 @@ namespace VesselStudioSimplePlugin
             okButton = new Button
             {
                 Text = "Capture && Upload",
-                Location = new Point(180, 170),
+                Location = new Point(180, 210),
                 Width = 120,
                 DialogResult = DialogResult.OK,
                 Enabled = false
             };
             okButton.Click += (s, e) =>
             {
+                if (string.IsNullOrWhiteSpace(nameTextBox.Text))
+                {
+                    System.Windows.Forms.MessageBox.Show(
+                        "Please enter an image name.", 
+                        "Name Required", 
+                        System.Windows.Forms.MessageBoxButtons.OK, 
+                        System.Windows.Forms.MessageBoxIcon.Warning);
+                    return;
+                }
+                
                 SelectedProject = projectComboBox.SelectedItem as VesselProject;
-                ImageName = string.IsNullOrWhiteSpace(nameTextBox.Text)
-                    ? $"Rhino Capture {DateTime.Now:HH:mm:ss}"
-                    : nameTextBox.Text;
+                ImageName = nameTextBox.Text.Trim();
             };
             Controls.Add(okButton);
 
@@ -319,7 +334,7 @@ namespace VesselStudioSimplePlugin
             cancelButton = new Button
             {
                 Text = "Cancel",
-                Location = new Point(310, 170),
+                Location = new Point(310, 210),
                 Width = 70,
                 DialogResult = DialogResult.Cancel
             };
@@ -363,7 +378,9 @@ namespace VesselStudioSimplePlugin
         {
             projectComboBox.DataSource = _projects;
             projectComboBox.Enabled = true;
-            okButton.Enabled = true;
+            
+            // Only enable OK button if name is also entered
+            okButton.Enabled = !string.IsNullOrWhiteSpace(nameTextBox.Text);
 
             // Pre-select last used project
             if (!string.IsNullOrEmpty(_settings.LastProjectId))
@@ -375,7 +392,7 @@ namespace VesselStudioSimplePlugin
                 }
             }
 
-            statusLabel.Text = $"✅ {_projects.Count} project(s) loaded";
+            statusLabel.Text = $"✅ {_projects.Count} project(s) loaded - Enter image name to continue";
             statusLabel.ForeColor = Color.Green;
         }
     }

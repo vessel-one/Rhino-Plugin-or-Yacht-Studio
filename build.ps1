@@ -233,10 +233,21 @@ if ($rhpFiles) {
     Write-Host "  1. Close Rhino" -ForegroundColor Gray
     Write-Host "  2. Copy .rhp file to Rhino plugin directory or drag-drop into Rhino" -ForegroundColor Gray
     Write-Host "  3. Start Rhino and test commands:" -ForegroundColor Gray
-    Write-Host "     - VesselStudioAbout" -ForegroundColor Gray
-    Write-Host "     - VesselSetApiKey" -ForegroundColor Gray
-    Write-Host "     - VesselStudioStatus" -ForegroundColor Gray
-    Write-Host "     - VesselCapture" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     UI Commands:" -ForegroundColor Cyan
+    Write-Host "     - VesselStudioShowToolbar    (Show dockable toolbar panel)" -ForegroundColor Gray
+    Write-Host "     - VesselStudioAbout          (About dialog)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     Setup Commands:" -ForegroundColor Cyan
+    Write-Host "     - VesselSetApiKey            (Configure API key)" -ForegroundColor Gray
+    Write-Host "     - VesselStudioStatus         (Check connection)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     Capture Commands:" -ForegroundColor Cyan
+    Write-Host "     - VesselCapture              (Capture with project selection)" -ForegroundColor Gray
+    Write-Host "     - VesselQuickCapture         (Quick capture to last project)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     Help:" -ForegroundColor Cyan
+    Write-Host "     - VesselStudioHelp           (Open online documentation)" -ForegroundColor Gray
 }
 else {
     Write-Host "Warning: No .rhp files found in build output" -ForegroundColor Yellow

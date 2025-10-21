@@ -8,10 +8,15 @@ param(
 
 Write-Host "=== Quick Build ===" -ForegroundColor Cyan
 
-$buildArgs = @(".\build.ps1", "-Configuration", $Configuration, "-SkipChangelog", "-SkipVersionCheck")
-
-if ($Clean) {
-    $buildArgs += "-Clean"
+$scriptPath = Join-Path $PSScriptRoot "build.ps1"
+$buildArgs = @{
+    Configuration = $Configuration
+    SkipChangelog = $true
+    SkipVersionCheck = $true
 }
 
-& @buildArgs
+if ($Clean) {
+    $buildArgs.Clean = $true
+}
+
+& $scriptPath @buildArgs

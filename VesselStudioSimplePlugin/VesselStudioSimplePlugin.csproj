@@ -31,6 +31,13 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
 
+  <!-- Embed icon resources -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\icon_24.png" />
+    <EmbeddedResource Include="Resources\icon_32.png" />
+    <EmbeddedResource Include="Resources\icon_48.png" />
+  </ItemGroup>
+
   <!-- Post-build step to create .rhp file from .dll and clean up -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)$(ProjectName).rhp" />

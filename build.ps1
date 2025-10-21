@@ -1,0 +1,274 @@
+# Vessel Studio Plugin Build Script
+# Integrates changelog analysis and version management into the build process
+
+param(
+    [string]$Configuration = "Release",
+    [switch]$SkipChangelog,
+    [switch]$SkipVersionCheck,
+    [switch]$Clean,
+    [string]$Since = "HEAD~10"
+)
+
+$ErrorActionPreference = "Stop"
+$scriptRoot = $PSScriptRoot
+
+Write-Host "=== Vessel Studio Plugin Build ===" -ForegroundColor Cyan
+Write-Host ""
+
+# ============================================================================
+# Step 1: Changelog Analysis (if not skipped)
+# ============================================================================
+if (-not $SkipChangelog) {
+    Write-Host "Step 1: Analyzing changes for changelog..." -ForegroundColor Yellow
+    
+    if (Test-Path "$scriptRoot\update-changelog.ps1") {
+        try {
+            & "$scriptRoot\update-changelog.ps1" -Suggest -Since $Since
+            Write-Host ""
+            Write-Host "Changelog analysis complete. Review suggestions above." -ForegroundColor Green
+            Write-Host ""
+            
+            # Pause for review
+            $response = Read-Host "Continue with build? (Y/n)"
+            if ($response -eq 'n' -or $response -eq 'N') {
+                Write-Host "Build cancelled by user." -ForegroundColor Red
+                exit 1
+            }
+        }
+        catch {
+            Write-Host "Warning: Changelog analysis failed: $_" -ForegroundColor Yellow
+            Write-Host "Continuing with build..." -ForegroundColor Yellow
+        }
+    }
+    else {
+        Write-Host "update-changelog.ps1 not found, skipping changelog analysis" -ForegroundColor Yellow
+    }
+}
+else {
+    Write-Host "Step 1: Skipping changelog analysis (--SkipChangelog)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# ============================================================================
+# Step 2: Version Check
+# ============================================================================
+if (-not $SkipVersionCheck) {
+    Write-Host "Step 2: Checking version information..." -ForegroundColor Yellow
+    
+    $versionFile = "$scriptRoot\VesselStudioSimplePlugin\Properties\AssemblyInfo.cs"
+    if (Test-Path $versionFile) {
+        $content = Get-Content $versionFile -Raw
+        
+        # Extract version numbers
+        if ($content -match 'AssemblyVersion\("(\d+)\.(\d+)\.(\d+)\.(\d+)"\)') {
+            $major = $Matches[1]
+            $minor = $Matches[2]
+            $patch = $Matches[3]
+        }
+        
+        Write-Host "  Current Version: $major.$minor.$patch" -ForegroundColor Cyan
+        
+        # Check CHANGELOG.md for matching version
+        $changelogFile = "$scriptRoot\docs\reference\CHANGELOG.md"
+        if (Test-Path $changelogFile) {
+            $changelog = Get-Content $changelogFile -Raw
+            if ($changelog -match "## \[($major\.$minor\.$patch)\]") {
+                Write-Host "  ✓ Version documented in CHANGELOG.md" -ForegroundColor Green
+            }
+            else {
+                Write-Host "  ⚠ Version $major.$minor.$patch not found in CHANGELOG.md" -ForegroundColor Yellow
+                Write-Host "    Consider updating the changelog before building" -ForegroundColor Yellow
+            }
+        }
+    }
+    else {
+        Write-Host "  Warning: AssemblyInfo.cs not found" -ForegroundColor Yellow
+    }
+}
+else {
+    Write-Host "Step 2: Skipping version check (--SkipVersionCheck)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# ============================================================================
+# Step 3: Clean (if requested)
+# ============================================================================
+if ($Clean) {
+    Write-Host "Step 3: Cleaning previous build..." -ForegroundColor Yellow
+    
+    $binDirs = Get-ChildItem -Path $scriptRoot -Recurse -Directory -Filter "bin" | Where-Object { $_.FullName -notlike "*\.specify*" }
+    $objDirs = Get-ChildItem -Path $scriptRoot -Recurse -Directory -Filter "obj" | Where-Object { $_.FullName -notlike "*\.specify*" }
+    
+    $binDirs + $objDirs | ForEach-Object {
+        Write-Host "  Removing $($_.FullName)" -ForegroundColor Gray
+        Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    
+    Write-Host "  ✓ Clean complete" -ForegroundColor Green
+}
+else {
+    Write-Host "Step 3: Skipping clean (use -Clean to clean before build)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# ============================================================================
+# Step 4: Build Project
+# ============================================================================
+Write-Host "Step 4: Building project..." -ForegroundColor Yellow
+
+$projectFile = "$scriptRoot\VesselStudioSimplePlugin\VesselStudioSimplePlugin.csproj"
+
+if (-not (Test-Path $projectFile)) {
+    Write-Host "Error: Project file not found at $projectFile" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "  Configuration: $Configuration" -ForegroundColor Cyan
+Write-Host "  Project: VesselStudioSimplePlugin.csproj" -ForegroundColor Cyan
+Write-Host ""
+
+$buildArgs = @(
+    "build",
+    $projectFile,
+    "--configuration", $Configuration,
+    "--no-incremental"
+)
+
+if ($Clean) {
+    $buildArgs += "--no-restore"
+}
+
+try {
+    & dotnet @buildArgs
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+    
+    Write-Host ""
+    Write-Host "✓ Build completed successfully!" -ForegroundColor Green
+}
+catch {
+    Write-Host ""
+    Write-Host "Build failed: $_" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host ""
+
+# ============================================================================
+# Step 5: Build Summary & Verification
+# ============================================================================
+Write-Host "=== Build Summary ===" -ForegroundColor Cyan
+Write-Host ""
+
+# Find generated .rhp files
+$rhpFiles = Get-ChildItem -Path "$scriptRoot\VesselStudioSimplePlugin\bin\$Configuration" -Filter "*.rhp" -Recurse -ErrorAction SilentlyContinue
+
+if ($rhpFiles) {
+    Write-Host "Plugin files generated:" -ForegroundColor Green
+    foreach ($rhp in $rhpFiles) {
+        $size = [math]::Round($rhp.Length / 1KB, 2)
+        $framework = $rhp.Directory.Name
+        Write-Host "  • $framework\$($rhp.Name) ($size KB)" -ForegroundColor Cyan
+    }
+    
+    # Verify RhinoCommon is NOT included
+    Write-Host ""
+    Write-Host "Verifying build output..." -ForegroundColor Yellow
+    
+    $binPath = $rhpFiles[0].DirectoryName
+    $rhinoCommonDll = Join-Path $binPath "RhinoCommon.dll"
+    $etoDll = Join-Path $binPath "Eto.dll"
+    $rhinoUIDll = Join-Path $binPath "Rhino.UI.dll"
+    
+    $hasIssues = $false
+    
+    if (Test-Path $rhinoCommonDll) {
+        Write-Host "  ⚠ WARNING: RhinoCommon.dll found in output (should be excluded)" -ForegroundColor Red
+        $hasIssues = $true
+    }
+    else {
+        Write-Host "  ✓ RhinoCommon.dll excluded (correct)" -ForegroundColor Green
+    }
+    
+    if (Test-Path $etoDll) {
+        Write-Host "  ⚠ WARNING: Eto.dll found in output (should be excluded)" -ForegroundColor Red
+        $hasIssues = $true
+    }
+    else {
+        Write-Host "  ✓ Eto.dll excluded (correct)" -ForegroundColor Green
+    }
+    
+    if (Test-Path $rhinoUIDll) {
+        Write-Host "  ⚠ WARNING: Rhino.UI.dll found in output (should be excluded)" -ForegroundColor Red
+        $hasIssues = $true
+    }
+    else {
+        Write-Host "  ✓ Rhino.UI.dll excluded (correct)" -ForegroundColor Green
+    }
+    
+    # Check for required DLLs
+    $newtonsoftDll = Join-Path $binPath "Newtonsoft.Json.dll"
+    if (Test-Path $newtonsoftDll) {
+        Write-Host "  ✓ Newtonsoft.Json.dll included (correct)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "  ⚠ WARNING: Newtonsoft.Json.dll not found" -ForegroundColor Yellow
+    }
+    
+    if ($hasIssues) {
+        Write-Host ""
+        Write-Host "Build output has issues! RhinoCommon/Eto DLLs should not be copied." -ForegroundColor Red
+        Write-Host "Check post-build events in .csproj file." -ForegroundColor Yellow
+    }
+    
+    Write-Host ""
+    Write-Host "Installation:" -ForegroundColor Yellow
+    Write-Host "  1. Close Rhino" -ForegroundColor Gray
+    Write-Host "  2. Copy .rhp file to Rhino plugin directory or drag-drop into Rhino" -ForegroundColor Gray
+    Write-Host "  3. Start Rhino and test commands:" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     UI Commands:" -ForegroundColor Cyan
+    Write-Host "     - VesselStudioShowToolbar    (Show dockable toolbar panel)" -ForegroundColor Gray
+    Write-Host "     - VesselStudioAbout          (About dialog)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     Setup Commands:" -ForegroundColor Cyan
+    Write-Host "     - VesselSetApiKey            (Configure API key)" -ForegroundColor Gray
+    Write-Host "     - VesselStudioStatus         (Check connection)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     Capture Commands:" -ForegroundColor Cyan
+    Write-Host "     - VesselCapture              (Capture with project selection)" -ForegroundColor Gray
+    Write-Host "     - VesselQuickCapture         (Quick capture to last project)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "     Help:" -ForegroundColor Cyan
+    Write-Host "     - VesselStudioHelp           (Open online documentation)" -ForegroundColor Gray
+}
+else {
+    Write-Host "Warning: No .rhp files found in build output" -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "Build completed at $(Get-Date -Format 'HH:mm:ss')" -ForegroundColor Cyan
+Write-Host ""
+
+# ============================================================================
+# Optional: Stage changes for commit
+# ============================================================================
+$uncommitted = git status --short 2>$null
+if ($uncommitted) {
+    Write-Host ""
+    $stageChanges = Read-Host "Stage all changes for commit? (y/N)"
+    if ($stageChanges -eq 'y' -or $stageChanges -eq 'Y') {
+        git add -A
+        Write-Host "  ✓ Changes staged" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "Commit message suggestion based on changelog:" -ForegroundColor Yellow
+        Write-Host "  git commit -m 'Add About dialog, fix capture UX and FormData upload'" -ForegroundColor Cyan
+    }
+}

@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>VesselStudioSimplePlugin</AssemblyName>
+    <RootNamespace>VesselStudioSimplePlugin</RootNamespace>
+    <Version>1.0.0</Version>
+    <Title>Vessel Studio Simple Plugin</Title>
+    <Description>Simple Rhino plugin for capturing viewport and uploading to Vessel Studio</Description>
+    <Authors>VesselOne</Authors>
+    <Company>VesselOne</Company>
+    <Product>Vessel Studio Rhino Plugin</Product>
+    <Copyright>Copyright © 2025 VesselOne</Copyright>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" Version="8.1.23325.13001" PrivateAssets="all" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <!-- Embed icon resources -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\icon_24.png" />
+    <EmbeddedResource Include="Resources\icon_32.png" />
+    <EmbeddedResource Include="Resources\icon_48.png" />
+  </ItemGroup>
+
+  <!-- Post-build step to create .rhp file from .dll and clean up -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)$(ProjectName).rhp" />
+    
+    <!-- Remove RhinoCommon and related DLLs that Rhino already provides -->
+    <Delete Files="$(TargetDir)RhinoCommon.dll" ContinueOnError="true" />
+    <Delete Files="$(TargetDir)Rhino.UI.dll" ContinueOnError="true" />
+    <Delete Files="$(TargetDir)Eto.dll" ContinueOnError="true" />
+    <Delete Files="$(TargetDir)Ed.Eto.dll" ContinueOnError="true" />
+  </Target>
+
+</Project>

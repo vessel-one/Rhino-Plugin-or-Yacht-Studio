@@ -1,0 +1,851 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Vessel Studio Plugin API",
+    "description": "API endpoints for Rhino plugin integration with Vessel Studio",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Vessel Studio API Support",
+      "email": "support@vesselone.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://vesselstudio.ai/api",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/plugin/auth/init": {
+      "post": {
+        "summary": "Initialize plugin authentication flow",
+        "description": "Start device authorization flow for Rhino plugin",
+        "operationId": "initPluginAuth",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthInitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication flow initialized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthInitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Authentication"]
+      }
+    },
+    "/plugin/auth/poll": {
+      "get": {
+        "summary": "Poll for authentication completion",
+        "description": "Check if user has completed browser authentication",
+        "operationId": "pollAuthStatus",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "Poll token from auth init response",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authentication completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthCompleteResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Authentication still pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthPendingResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid or expired poll token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authentication session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Authentication"]
+      }
+    },
+    "/plugin/auth/validate": {
+      "get": {
+        "summary": "Validate authentication token",
+        "description": "Verify token validity and get user info",
+        "operationId": "validateToken",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenValidationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Authentication"]
+      }
+    },
+    "/plugin/auth/refresh": {
+      "post": {
+        "summary": "Refresh authentication token",
+        "description": "Get new access token using refresh token",
+        "operationId": "refreshToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRefreshResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Authentication"]
+      }
+    },
+    "/plugin/projects": {
+      "get": {
+        "summary": "Get user's projects",
+        "description": "List all projects accessible to authenticated user",
+        "operationId": "getUserProjects",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Projects"]
+      }
+    },
+    "/plugin/project/{projectId}": {
+      "get": {
+        "summary": "Get project details",
+        "description": "Retrieve detailed project information and image list",
+        "operationId": "getProjectDetails",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project details retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Projects"]
+      }
+    },
+    "/plugin/project/{projectId}/screenshot": {
+      "post": {
+        "summary": "Upload screenshot to project",
+        "description": "Upload viewport screenshot with metadata to specified project",
+        "operationId": "uploadScreenshot",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenshotUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Screenshot uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenshotUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid image or metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Image file too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Screenshots"]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase ID token or custom JWT"
+      }
+    },
+    "schemas": {
+      "AuthInitRequest": {
+        "type": "object",
+        "required": ["deviceId", "rhinoVersion", "pluginVersion"],
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "description": "Unique device identifier for this Rhino instance",
+            "example": "rhino-plugin-12345678-1234-1234-1234-123456789012"
+          },
+          "rhinoVersion": {
+            "type": "string",
+            "description": "Rhino version information",
+            "example": "8.0.23304.15001"
+          },
+          "pluginVersion": {
+            "type": "string",
+            "description": "Plugin version",
+            "example": "1.0.0"
+          }
+        }
+      },
+      "AuthInitResponse": {
+        "type": "object",
+        "required": ["authUrl", "pollToken", "expiresIn"],
+        "properties": {
+          "authUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to open in browser for authentication",
+            "example": "https://vesselstudio.ai/plugin-auth?code=ABC123"
+          },
+          "pollToken": {
+            "type": "string",
+            "description": "Token for polling authentication status",
+            "example": "poll_xyz789abc123def456"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "Seconds until authentication flow expires",
+            "example": 300
+          }
+        }
+      },
+      "AuthPendingResponse": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending"],
+            "description": "Authentication still in progress"
+          }
+        }
+      },
+      "AuthCompleteResponse": {
+        "type": "object",
+        "required": ["status", "accessToken", "userId", "expiresAt"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["complete"],
+            "description": "Authentication completed successfully"
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT access token for API requests",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token for token renewal",
+            "example": "refresh_abc123def456"
+          },
+          "userId": {
+            "type": "string",
+            "description": "Vessel Studio user identifier",
+            "example": "user-001"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Token expiration timestamp",
+            "example": "2025-10-17T12:00:00Z"
+          }
+        }
+      },
+      "TokenValidationResponse": {
+        "type": "object",
+        "required": ["valid", "userId"],
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Token validity status"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User identifier if token is valid",
+            "example": "user-001"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address",
+            "example": "user@example.com"
+          },
+          "role": {
+            "type": "string",
+            "description": "User role",
+            "example": "user"
+          }
+        }
+      },
+      "TokenRefreshRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token from initial authentication",
+            "example": "refresh_abc123def456"
+          }
+        }
+      },
+      "TokenRefreshResponse": {
+        "type": "object",
+        "required": ["accessToken", "expiresAt"],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "New JWT access token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "New refresh token (optional)",
+            "example": "refresh_xyz789ghi012"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "New token expiration timestamp",
+            "example": "2025-10-17T12:00:00Z"
+          }
+        }
+      },
+      "ProjectsResponse": {
+        "type": "object",
+        "required": ["projects"],
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummary"
+            }
+          }
+        }
+      },
+      "ProjectSummary": {
+        "type": "object",
+        "required": ["id", "name", "lastModified", "imageCount"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Project identifier",
+            "example": "proj-001"
+          },
+          "name": {
+            "type": "string",
+            "description": "Project display name",
+            "example": "60ft Sailing Yacht"
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description",
+            "example": "Luxury sailing yacht design project"
+          },
+          "lastModified": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last project update timestamp",
+            "example": "2025-10-16T10:30:00Z"
+          },
+          "imageCount": {
+            "type": "integer",
+            "description": "Number of images in project",
+            "example": 5
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Project thumbnail image URL",
+            "example": "https://storage.googleapis.com/.../thumbnail.jpg"
+          }
+        }
+      },
+      "ProjectDetailResponse": {
+        "type": "object",
+        "required": ["id", "name", "images"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Project identifier",
+            "example": "proj-001"
+          },
+          "name": {
+            "type": "string",
+            "description": "Project display name",
+            "example": "60ft Sailing Yacht"
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectImage"
+            }
+          }
+        }
+      },
+      "ProjectImage": {
+        "type": "object",
+        "required": ["id", "url", "timestamp"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Image identifier",
+            "example": "img-001"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Image URL",
+            "example": "https://storage.googleapis.com/.../image.png"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Image upload timestamp",
+            "example": "2025-10-16T10:15:00Z"
+          },
+          "source": {
+            "type": "string",
+            "description": "Image source",
+            "example": "rhino-plugin"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ImageMetadata"
+          }
+        }
+      },
+      "ScreenshotUploadRequest": {
+        "type": "object",
+        "required": ["image", "metadata"],
+        "properties": {
+          "image": {
+            "type": "string",
+            "format": "binary",
+            "description": "Image file (PNG or JPEG)"
+          },
+          "metadata": {
+            "type": "string",
+            "description": "JSON-encoded metadata object",
+            "example": "{\"rhinoVersion\":\"8.0.23304.15001\",\"viewportName\":\"Perspective\",\"displayMode\":\"Shaded\"}"
+          }
+        }
+      },
+      "ImageMetadata": {
+        "type": "object",
+        "required": ["rhinoVersion", "viewportName", "displayMode", "timestamp"],
+        "properties": {
+          "rhinoVersion": {
+            "type": "string",
+            "description": "Rhino version that captured the image",
+            "example": "8.0.23304.15001"
+          },
+          "viewportName": {
+            "type": "string",
+            "description": "Rhino viewport name",
+            "example": "Perspective"
+          },
+          "displayMode": {
+            "type": "string",
+            "description": "Rhino display mode",
+            "example": "Shaded"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Capture timestamp",
+            "example": "2025-10-16T11:45:30Z"
+          },
+          "cameraPosition": {
+            "$ref": "#/components/schemas/Point3D"
+          },
+          "cameraTarget": {
+            "$ref": "#/components/schemas/Point3D"
+          },
+          "cameraUp": {
+            "$ref": "#/components/schemas/Vector3D"
+          },
+          "renderSettings": {
+            "$ref": "#/components/schemas/RenderSettings"
+          }
+        }
+      },
+      "Point3D": {
+        "type": "object",
+        "required": ["x", "y", "z"],
+        "properties": {
+          "x": {
+            "type": "number",
+            "format": "double",
+            "description": "X coordinate"
+          },
+          "y": {
+            "type": "number",
+            "format": "double",
+            "description": "Y coordinate"
+          },
+          "z": {
+            "type": "number",
+            "format": "double",
+            "description": "Z coordinate"
+          }
+        }
+      },
+      "Vector3D": {
+        "type": "object",
+        "required": ["x", "y", "z"],
+        "properties": {
+          "x": {
+            "type": "number",
+            "format": "double",
+            "description": "X component"
+          },
+          "y": {
+            "type": "number",
+            "format": "double",
+            "description": "Y component"
+          },
+          "z": {
+            "type": "number",
+            "format": "double",
+            "description": "Z component"
+          }
+        }
+      },
+      "RenderSettings": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "integer",
+            "description": "Image width in pixels",
+            "example": 1920
+          },
+          "height": {
+            "type": "integer",
+            "description": "Image height in pixels",
+            "example": 1080
+          },
+          "antialiasing": {
+            "type": "boolean",
+            "description": "Antialiasing enabled",
+            "example": true
+          },
+          "quality": {
+            "type": "string",
+            "description": "Render quality setting",
+            "example": "High"
+          }
+        }
+      },
+      "ScreenshotUploadResponse": {
+        "type": "object",
+        "required": ["id", "url", "projectId", "uploadedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Server-assigned image identifier",
+            "example": "img-002"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Public URL of uploaded image",
+            "example": "https://storage.googleapis.com/vessel-studio/users/user-001/projects/proj-001/rhino-screenshots/20251016_114530_abc123.png"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project identifier",
+            "example": "proj-001"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Upload completion timestamp",
+            "example": "2025-10-16T11:45:31Z"
+          },
+          "fileSize": {
+            "type": "integer",
+            "description": "Uploaded file size in bytes",
+            "example": 2048576
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Invalid authentication token"
+          },
+          "code": {
+            "type": "string",
+            "description": "Error code for programmatic handling",
+            "example": "AUTH_TOKEN_INVALID"
+          },
+          "details": {
+            "type": "object",
+            "description": "Additional error context",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Plugin authentication and token management"
+    },
+    {
+      "name": "Projects",
+      "description": "Project listing and details"
+    },
+    {
+      "name": "Screenshots",
+      "description": "Viewport screenshot upload and management"
+    }
+  ]
+}

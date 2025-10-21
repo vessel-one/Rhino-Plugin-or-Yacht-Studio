@@ -1,50 +1,42 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: template → 1.0.0
+- Modified principles: New constitution created from template
+- Added sections: All core principles and security requirements
+- Removed sections: None (first version)
+- Templates requiring updates: ✅ No updates needed - constitution aligns with existing templates
+- Follow-up TODOs: None - all placeholders filled
+-->
+
+# Yacht Studio Rhino Plugin Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Security-First Authentication
+Authentication and credential management MUST prioritize security over convenience. All user credentials MUST be stored using OS-level secure storage APIs. Token refresh MUST be automatic and transparent. Multiple concurrent Rhino instances MUST maintain independent authentication sessions without conflicts. No credentials may be stored in plain text or logged.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. User Experience Excellence
+Plugin integration MUST feel native to Rhino workflow. Commands MUST be accessible via Rhino command line. Visual feedback MUST be provided for all operations (progress, success, errors). Viewport capture MUST complete in under 15 seconds from command to web visibility. Users MUST NOT be required to switch applications or manually manage files.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Cross-Platform Foundation
+All UI components MUST use Eto.Forms for cross-platform compatibility. Windows support is mandatory for MVP; macOS support MUST be architecturally planned but may be deferred. Platform-specific code MUST be isolated and abstracted behind interfaces. Plugin MUST work with both Rhino 7 and Rhino 8.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Resilient Operations
+Network connectivity loss MUST NOT cause data loss - implement local queuing with automatic retry. Large viewport images (>5MB) MUST be compressed using JPEG at 85% quality while preserving metadata. Authentication token expiration MUST trigger silent refresh with user prompt only on refresh failure. Plugin MUST gracefully handle project deletion and prompt for reselection.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Measurable Performance
+All performance requirements MUST include measurable criteria. Compression quality MUST maintain PSNR > 30dB. Authentication MUST complete in under 60 seconds including web interaction. 95% of viewport captures MUST succeed without user intervention. Authentication sessions MUST persist for at least 24 hours.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Security Requirements
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+Plugin MUST implement OAuth 2.0 or equivalent secure authentication flow. User data transmission MUST use HTTPS exclusively. Authentication tokens MUST have expiration and refresh mechanisms. Local storage MUST use OS-provided secure credential APIs (Windows Credential Manager, macOS Keychain). Plugin MUST validate user permissions before allowing uploads to projects.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Quality Gates
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Each feature MUST have independent test scenarios that deliver standalone value. User stories MUST include acceptance criteria with Given-When-Then format. All API integrations MUST be abstracted behind interfaces for testability. Plugin architecture MUST separate Commands, Services, UI, and Models into distinct layers. Code MUST handle edge cases explicitly defined in specifications.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices. All features and implementations MUST demonstrate compliance with these principles during code review. Principle violations MUST be explicitly justified and documented in complexity tracking sections. Constitution amendments require semantic versioning: MAJOR for principle changes, MINOR for additions, PATCH for clarifications.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-10-16 | **Last Amended**: 2025-10-16

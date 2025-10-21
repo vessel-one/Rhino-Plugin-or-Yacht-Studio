@@ -238,61 +238,72 @@ namespace VesselStudioSimplePlugin
 
         private void InitializeComponent()
         {
+            // Set up form properties
             Text = "Capture to Vessel Studio";
-            Width = 420;
-            Height = 280;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
             MinimizeBox = false;
+            AutoSize = false;
+            Padding = new Padding(20);
+
+            // Define layout constants
+            const int controlWidth = 400;
+            const int verticalSpacing = 30;
+            const int labelControlSpacing = 8;
+            int yPos = 20;
 
             // Status label (for loading feedback)
             statusLabel = new Label
             {
                 Text = "⏳ Loading projects...",
-                Location = new Point(20, 20),
-                Width = 380,
+                Location = new Point(20, yPos),
+                Width = controlWidth,
                 Height = 20,
                 ForeColor = Color.Gray,
                 Font = new Font(Font.FontFamily, 9f, FontStyle.Italic)
             };
             Controls.Add(statusLabel);
+            yPos += statusLabel.Height + verticalSpacing;
 
             // Project label
             var projectLabel = new Label
             {
                 Text = "Send to project:",
-                Location = new Point(20, 50),
+                Location = new Point(20, yPos),
                 AutoSize = true
             };
             Controls.Add(projectLabel);
+            yPos += projectLabel.Height + labelControlSpacing;
 
             // Project dropdown
             projectComboBox = new ComboBox
             {
-                Location = new Point(20, 75),
-                Width = 360,
+                Location = new Point(20, yPos),
+                Width = controlWidth,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false
             };
             projectComboBox.DisplayMember = "Name";
             projectComboBox.ValueMember = "Id";
             Controls.Add(projectComboBox);
+            yPos += projectComboBox.Height + verticalSpacing;
 
             // Name label
             var nameLabel = new Label
             {
-                Text = "Image name (optional):",
-                Location = new Point(20, 110),
+                Text = "Image name (required):",
+                Location = new Point(20, yPos),
                 AutoSize = true
             };
             Controls.Add(nameLabel);
+            yPos += nameLabel.Height + labelControlSpacing;
 
             // Name textbox
             nameTextBox = new TextBox
             {
-                Location = new Point(20, 135),
-                Width = 360,
+                Location = new Point(20, yPos),
+                Width = controlWidth,
                 Text = ""
             };
             nameTextBox.TextChanged += (s, e) =>
@@ -303,16 +314,29 @@ namespace VesselStudioSimplePlugin
                                   projectComboBox.Items.Count > 0;
             };
             Controls.Add(nameTextBox);
+            yPos += nameTextBox.Height + verticalSpacing + 10;
 
-            // OK button
+            // Cancel button (place first to calculate OK button position)
+            cancelButton = new Button
+            {
+                Text = "Cancel",
+                Width = 80,
+                Height = 32,
+                DialogResult = DialogResult.Cancel
+            };
+            cancelButton.Location = new Point(20 + controlWidth - cancelButton.Width, yPos);
+            Controls.Add(cancelButton);
+
+            // OK button (place to left of cancel)
             okButton = new Button
             {
                 Text = "Capture && Upload",
-                Location = new Point(180, 210),
-                Width = 120,
+                Width = 140,
+                Height = 32,
                 DialogResult = DialogResult.OK,
                 Enabled = false
             };
+            okButton.Location = new Point(cancelButton.Left - okButton.Width - 10, yPos);
             okButton.Click += (s, e) =>
             {
                 if (string.IsNullOrWhiteSpace(nameTextBox.Text))
@@ -329,16 +353,10 @@ namespace VesselStudioSimplePlugin
                 ImageName = nameTextBox.Text.Trim();
             };
             Controls.Add(okButton);
+            yPos += okButton.Height + 20;
 
-            // Cancel button
-            cancelButton = new Button
-            {
-                Text = "Cancel",
-                Location = new Point(310, 210),
-                Width = 70,
-                DialogResult = DialogResult.Cancel
-            };
-            Controls.Add(cancelButton);
+            // Set final form size with padding
+            ClientSize = new Size(controlWidth + 40, yPos);
 
             AcceptButton = okButton;
             CancelButton = cancelButton;

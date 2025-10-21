@@ -24,19 +24,23 @@ namespace VesselStudioSimplePlugin
             var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
 
             Text = "About Vessel Studio Plugin";
-            Width = 500;
-            Height = 420;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
             MinimizeBox = false;
             BackColor = Color.White;
+            AutoSize = false;
+            
+            // Layout constants
+            const int contentWidth = 460;
+            const int padding = 20;
+            int yPos = 0;
 
             // Logo/Header
             var headerPanel = new Panel
             {
-                Location = new Point(0, 0),
-                Width = 500,
+                Location = new Point(0, yPos),
+                Width = contentWidth + (padding * 2),
                 Height = 80,
                 BackColor = Color.FromArgb(37, 99, 235) // Blue
             };
@@ -45,8 +49,8 @@ namespace VesselStudioSimplePlugin
             var titleLabel = new Label
             {
                 Text = "Vessel Studio",
-                Location = new Point(20, 15),
-                Width = 460,
+                Location = new Point(padding, 15),
+                Width = contentWidth,
                 Height = 30,
                 Font = new Font("Segoe UI", 18f, FontStyle.Bold),
                 ForeColor = Color.White,
@@ -57,62 +61,67 @@ namespace VesselStudioSimplePlugin
             var subtitleLabel = new Label
             {
                 Text = "Rhino Plugin",
-                Location = new Point(20, 45),
-                Width = 460,
+                Location = new Point(padding, 45),
+                Width = contentWidth,
                 Height = 25,
                 Font = new Font("Segoe UI", 12f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(219, 234, 254),
                 BackColor = Color.Transparent
             };
             headerPanel.Controls.Add(subtitleLabel);
+            yPos += headerPanel.Height + padding;
 
             // Version info
             var versionLabel = new Label
             {
                 Text = $"Version {versionString}",
-                Location = new Point(20, 100),
-                Width = 460,
-                Height = 25,
+                Location = new Point(padding, yPos),
+                Width = contentWidth,
+                AutoSize = true,
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(71, 85, 105)
             };
             Controls.Add(versionLabel);
+            yPos += versionLabel.Height + 5;
 
             var buildLabel = new Label
             {
                 Text = $"Build for Rhino {RhinoApp.Version.Major}",
-                Location = new Point(20, 125),
-                Width = 460,
-                Height = 20,
+                Location = new Point(padding, yPos),
+                Width = contentWidth,
+                AutoSize = true,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(148, 163, 184)
             };
             Controls.Add(buildLabel);
+            yPos += buildLabel.Height + 20;
 
-            // Description
+            // Description with wrapping
             var descriptionLabel = new Label
             {
-                Text = "Capture and share your yacht designs with the Vessel Studio platform. " +
-                       "Upload viewport screenshots, manage projects, and collaborate with your team.",
-                Location = new Point(20, 165),
-                Width = 460,
-                Height = 50,
+                Text = "Capture and share your yacht designs with the Vessel Studio platform. Upload viewport screenshots, manage projects, and collaborate with your team.",
+                Location = new Point(padding, yPos),
+                Width = contentWidth,
+                MaximumSize = new Size(contentWidth, 0),
+                AutoSize = true,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(71, 85, 105)
             };
             Controls.Add(descriptionLabel);
+            yPos += descriptionLabel.Height + 20;
 
             // Features section
             var featuresLabel = new Label
             {
                 Text = "Features:",
-                Location = new Point(20, 225),
-                Width = 460,
-                Height = 20,
+                Location = new Point(padding, yPos),
+                Width = contentWidth,
+                AutoSize = true,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(51, 65, 85)
             };
             Controls.Add(featuresLabel);
+            yPos += featuresLabel.Height + 8;
 
             var featuresText = new Label
             {
@@ -121,21 +130,23 @@ namespace VesselStudioSimplePlugin
                        "• Project Management Integration\n" +
                        "• Automatic Metadata Collection\n" +
                        "• Cross-platform Support (Windows & Mac)",
-                Location = new Point(40, 250),
-                Width = 440,
-                Height = 80,
+                Location = new Point(padding + 20, yPos),
+                Width = contentWidth - 20,
+                MaximumSize = new Size(contentWidth - 20, 0),
+                AutoSize = true,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(71, 85, 105)
             };
             Controls.Add(featuresText);
+            yPos += featuresText.Height + 20;
 
-            // Links
+            // Links row
+            int linkX = padding;
             var websiteLink = new LinkLabel
             {
-                Text = "Visit vesselstudio.io",
-                Location = new Point(20, 340),
-                Width = 150,
-                Height = 20,
+                Text = "vesselstudio.io",
+                Location = new Point(linkX, yPos),
+                AutoSize = true,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 LinkColor = Color.FromArgb(37, 99, 235),
                 ActiveLinkColor = Color.FromArgb(29, 78, 216)
@@ -152,13 +163,13 @@ namespace VesselStudioSimplePlugin
                 }
             };
             Controls.Add(websiteLink);
+            linkX += 120;
 
             var docsLink = new LinkLabel
             {
                 Text = "Documentation",
-                Location = new Point(180, 340),
-                Width = 120,
-                Height = 20,
+                Location = new Point(linkX, yPos),
+                AutoSize = true,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 LinkColor = Color.FromArgb(37, 99, 235),
                 ActiveLinkColor = Color.FromArgb(29, 78, 216)
@@ -175,13 +186,13 @@ namespace VesselStudioSimplePlugin
                 }
             };
             Controls.Add(docsLink);
+            linkX += 120;
 
             var supportLink = new LinkLabel
             {
                 Text = "Support",
-                Location = new Point(310, 340),
-                Width = 80,
-                Height = 20,
+                Location = new Point(linkX, yPos),
+                AutoSize = true,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 LinkColor = Color.FromArgb(37, 99, 235),
                 ActiveLinkColor = Color.FromArgb(29, 78, 216)
@@ -198,27 +209,14 @@ namespace VesselStudioSimplePlugin
                 }
             };
             Controls.Add(supportLink);
+            yPos += 30;
 
-            // Copyright
-            var copyrightLabel = new Label
-            {
-                Text = "© 2025 VesselOne. All rights reserved.",
-                Location = new Point(20, 365),
-                Width = 460,
-                Height = 20,
-                Font = new Font("Segoe UI", 8f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(148, 163, 184),
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            Controls.Add(copyrightLabel);
-
-            // Close button
+            // Close button (right-aligned)
             var closeButton = new Button
             {
                 Text = "Close",
-                Location = new Point(395, 340),
                 Width = 80,
-                Height = 28,
+                Height = 32,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 DialogResult = DialogResult.OK,
                 FlatStyle = FlatStyle.Flat,
@@ -226,7 +224,27 @@ namespace VesselStudioSimplePlugin
                 ForeColor = Color.FromArgb(51, 65, 85)
             };
             closeButton.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            closeButton.Location = new Point(padding + contentWidth - closeButton.Width, yPos);
             Controls.Add(closeButton);
+            yPos += closeButton.Height + 10;
+
+            // Copyright (centered at bottom)
+            var copyrightLabel = new Label
+            {
+                Text = "© 2025 VesselOne. All rights reserved.",
+                Location = new Point(padding, yPos),
+                Width = contentWidth,
+                AutoSize = false,
+                Height = 20,
+                Font = new Font("Segoe UI", 8f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(148, 163, 184),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            Controls.Add(copyrightLabel);
+            yPos += copyrightLabel.Height + padding;
+
+            // Set final form size
+            ClientSize = new Size(contentWidth + (padding * 2), yPos);
 
             AcceptButton = closeButton;
             CancelButton = closeButton;

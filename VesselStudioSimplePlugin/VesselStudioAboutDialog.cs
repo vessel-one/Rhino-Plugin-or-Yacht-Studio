@@ -41,7 +41,7 @@ namespace VesselStudioSimplePlugin
             {
                 Location = new Point(0, yPos),
                 Width = contentWidth + (padding * 2),
-                Height = 80,
+                Height = 90,
                 BackColor = Color.FromArgb(37, 99, 235) // Blue
             };
             Controls.Add(headerPanel);
@@ -49,9 +49,9 @@ namespace VesselStudioSimplePlugin
             var titleLabel = new Label
             {
                 Text = "Vessel Studio",
-                Location = new Point(padding, 15),
+                Location = new Point(padding, 20),
                 Width = contentWidth,
-                Height = 30,
+                AutoSize = true,
                 Font = new Font("Segoe UI", 18f, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent
@@ -61,9 +61,9 @@ namespace VesselStudioSimplePlugin
             var subtitleLabel = new Label
             {
                 Text = "Rhino Plugin",
-                Location = new Point(padding, 45),
+                Location = new Point(padding, 50),
                 Width = contentWidth,
-                Height = 25,
+                AutoSize = true,
                 Font = new Font("Segoe UI", 12f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(219, 234, 254),
                 BackColor = Color.Transparent
@@ -231,7 +231,7 @@ namespace VesselStudioSimplePlugin
             // Copyright (centered at bottom)
             var copyrightLabel = new Label
             {
-                Text = "© 2025 VesselOne. All rights reserved.",
+                Text = "© 2025 Creata Collective Limited (NZ). All rights reserved.",
                 Location = new Point(padding, yPos),
                 Width = contentWidth,
                 AutoSize = false,

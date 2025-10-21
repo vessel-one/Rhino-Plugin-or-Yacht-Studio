@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("VesselStudioSimplePlugin")]
 [assembly: AssemblyDescription("Simple Rhino plugin for capturing viewport and uploading to Vessel Studio")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("VesselOne")]
+[assembly: AssemblyCompany("Creata Collective Limited")]
 [assembly: AssemblyProduct("Vessel Studio Rhino Plugin")]
-[assembly: AssemblyCopyright("Copyright © 2025 VesselOne")]
+[assembly: AssemblyCopyright("Copyright © 2025 Creata Collective Limited (NZ)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

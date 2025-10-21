@@ -31,20 +31,23 @@ namespace VesselStudioSimplePlugin
             this.Padding = new Padding(10);
             this.BackColor = Color.FromArgb(240, 240, 240);
 
+            int yPos = 10;
+
             // Title
             var titleLabel = new Label
             {
                 Text = "Vessel Studio",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(10, 10)
+                Location = new Point(10, yPos)
             };
             this.Controls.Add(titleLabel);
+            yPos += 35; // Space for title + padding
 
             // Status panel
             _statusPanel = new Panel
             {
-                Location = new Point(10, 40),
+                Location = new Point(10, yPos),
                 Size = new Size(260, 50),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = Color.White
@@ -60,41 +63,46 @@ namespace VesselStudioSimplePlugin
             };
             _statusPanel.Controls.Add(_statusLabel);
             this.Controls.Add(_statusPanel);
+            yPos += 60; // Status panel height + padding
 
             // Settings button
-            _settingsButton = CreateButton("⚙ Set API Key", 10, 100, OnSettingsClick);
+            _settingsButton = CreateButton("⚙ Set API Key", 10, yPos, OnSettingsClick);
             _settingsButton.BackColor = Color.FromArgb(70, 130, 180);
             _settingsButton.ForeColor = Color.White;
             this.Controls.Add(_settingsButton);
+            yPos += 45; // Button height + padding
 
             // Capture button
-            _captureButton = CreateButton("📷 Capture Screenshot", 10, 145, OnCaptureClick);
+            _captureButton = CreateButton("📷 Capture Screenshot", 10, yPos, OnCaptureClick);
             _captureButton.BackColor = Color.FromArgb(76, 175, 80);
             _captureButton.ForeColor = Color.White;
             this.Controls.Add(_captureButton);
+            yPos += 45; // Button height + padding
 
             // Quick capture button
-            _quickCaptureButton = CreateButton("⚡ Quick Capture", 10, 190, OnQuickCaptureClick);
+            _quickCaptureButton = CreateButton("⚡ Quick Capture", 10, yPos, OnQuickCaptureClick);
             _quickCaptureButton.BackColor = Color.FromArgb(255, 152, 0);
             _quickCaptureButton.ForeColor = Color.White;
             this.Controls.Add(_quickCaptureButton);
+            yPos += 45; // Button height + padding
 
             // Help text
             var helpLabel = new Label
             {
                 Text = "Quick Capture saves to\nthe last used project",
-                Location = new Point(10, 240),
+                Location = new Point(10, yPos),
                 Size = new Size(260, 35),
                 Font = new Font("Segoe UI", 8),
                 ForeColor = Color.Gray
             };
             this.Controls.Add(helpLabel);
+            yPos += 45; // Help text height + padding
 
             // Documentation link
             var docLink = new LinkLabel
             {
                 Text = "📖 View Documentation",
-                Location = new Point(10, 285),
+                Location = new Point(10, yPos),
                 Size = new Size(260, 20),
                 Font = new Font("Segoe UI", 9),
                 LinkColor = Color.FromArgb(70, 130, 180)
@@ -108,12 +116,13 @@ namespace VesselStudioSimplePlugin
                 catch { }
             };
             this.Controls.Add(docLink);
+            yPos += 25; // Link height + padding
 
             // About link
             var aboutLink = new LinkLabel
             {
                 Text = "ℹ About Plugin",
-                Location = new Point(10, 310),
+                Location = new Point(10, yPos),
                 Size = new Size(260, 20),
                 Font = new Font("Segoe UI", 9),
                 LinkColor = Color.FromArgb(70, 130, 180)

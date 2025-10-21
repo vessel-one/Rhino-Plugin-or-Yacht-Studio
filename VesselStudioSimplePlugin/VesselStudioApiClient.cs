@@ -215,17 +215,25 @@ namespace VesselStudioSimplePlugin
                 // Create multipart form data
                 using (var content = new MultipartFormDataContent())
                 {
-                    // Add image
+                    // Add image file - use "file" field name (standard for multipart uploads)
                     var imageContent = new ByteArrayContent(imageBytes);
                     imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-                    content.Add(imageContent, "image", "capture.png");
+                    content.Add(imageContent, "file", "capture.png");
 
-                    // Add image name
-                    content.Add(new StringContent(imageName), "name");
+                    // Add image name as separate field
+                    if (!string.IsNullOrEmpty(imageName))
+                    {
+                        content.Add(new StringContent(imageName, Encoding.UTF8), "name");
+                    }
 
-                    // Add metadata
-                    var metadataJson = JsonConvert.SerializeObject(metadata);
-                    content.Add(new StringContent(metadataJson, Encoding.UTF8, "application/json"), "metadata");
+                    // Add metadata fields individually (not as JSON)
+                    if (metadata != null)
+                    {
+                        foreach (var kvp in metadata)
+                        {
+                            content.Add(new StringContent(kvp.Value?.ToString() ?? "", Encoding.UTF8), kvp.Key);
+                        }
+                    }
 
                     // Upload to specific project
                     var response = await _httpClient.PostAsync($"/api/rhino/projects/{projectId}/upload", content);

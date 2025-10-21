@@ -59,10 +59,27 @@ namespace VesselStudioSimplePlugin
                 RhinoApp.WriteLine("  VesselCapture        - Capture and upload screenshot");
                 RhinoApp.WriteLine("  VesselQuickCapture   - Quick capture to last project");
                 RhinoApp.WriteLine("  VesselStudioStatus   - Check connection status");
+                RhinoApp.WriteLine("  VesselStudioAbout    - About this plugin");
                 RhinoApp.WriteLine("");
                 RhinoApp.WriteLine("For more information, visit: https://vesselstudio.io/docs/rhino-plugin");
             }
 
+            return Result.Success;
+        }
+    }
+
+    /// <summary>
+    /// About command that shows version info and credits
+    /// </summary>
+    [System.Runtime.InteropServices.Guid("E9F0A1B2-C3D4-5E6F-7A8B-9C0D1E2F3A4B")]
+    public class VesselStudioAboutCommand : Command
+    {
+        public override string EnglishName => "VesselStudioAbout";
+
+        protected override Result RunCommand(RhinoDoc doc, RunMode mode)
+        {
+            var dialog = new VesselStudioAboutDialog();
+            dialog.ShowDialog();
             return Result.Success;
         }
     }

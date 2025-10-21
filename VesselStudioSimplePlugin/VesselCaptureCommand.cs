@@ -31,20 +31,8 @@ namespace VesselStudioSimplePlugin
             var apiClient = new VesselStudioApiClient();
             apiClient.SetApiKey(settings.ApiKey);
 
-            // Get projects
-            RhinoApp.WriteLine("Loading projects...");
-            var projectsTask = apiClient.GetProjectsAsync();
-            projectsTask.Wait();
-            var projects = projectsTask.Result;
-
-            if (projects == null || projects.Count == 0)
-            {
-                RhinoApp.WriteLine("❌ No projects found. Create a project at https://vesselstudio.io first.");
-                return Result.Failure;
-            }
-
-            // Show capture dialog
-            var dialog = new CaptureDialog(projects, settings);
+            // Show dialog immediately with loading state
+            var dialog = new CaptureDialog(apiClient, settings);
             if (dialog.ShowDialog() != DialogResult.OK)
             {
                 return Result.Cancel;
@@ -224,38 +212,57 @@ namespace VesselStudioSimplePlugin
     }
 
     /// <summary>
-    /// Simple WinForms dialog for project selection
+    /// Simple WinForms dialog for project selection with async loading
     /// </summary>
     internal class CaptureDialog : Form
     {
         private ComboBox projectComboBox;
         private TextBox nameTextBox;
+        private Label statusLabel;
         private Button okButton;
         private Button cancelButton;
+        private readonly VesselStudioApiClient _apiClient;
+        private readonly VesselStudioSettings _settings;
+        private List<VesselProject> _projects;
 
         public VesselProject SelectedProject { get; private set; }
         public string ImageName { get; private set; }
 
-        public CaptureDialog(List<VesselProject> projects, VesselStudioSettings settings)
+        public CaptureDialog(VesselStudioApiClient apiClient, VesselStudioSettings settings)
         {
-            InitializeComponent(projects, settings);
+            _apiClient = apiClient;
+            _settings = settings;
+            InitializeComponent();
+            LoadProjectsAsync();
         }
 
-        private void InitializeComponent(List<VesselProject> projects, VesselStudioSettings settings)
+        private void InitializeComponent()
         {
-            Text = "Capture to Vessel One";
-            Width = 400;
-            Height = 200;
+            Text = "Capture to Vessel Studio";
+            Width = 420;
+            Height = 230;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
             MinimizeBox = false;
 
+            // Status label (for loading feedback)
+            statusLabel = new Label
+            {
+                Text = "⏳ Loading projects...",
+                Location = new Point(20, 20),
+                Width = 380,
+                Height = 20,
+                ForeColor = Color.Gray,
+                Font = new Font(Font.FontFamily, 9f, FontStyle.Italic)
+            };
+            Controls.Add(statusLabel);
+
             // Project label
             var projectLabel = new Label
             {
                 Text = "Send to project:",
-                Location = new Point(20, 20),
+                Location = new Point(20, 50),
                 AutoSize = true
             };
             Controls.Add(projectLabel);
@@ -263,31 +270,20 @@ namespace VesselStudioSimplePlugin
             // Project dropdown
             projectComboBox = new ComboBox
             {
-                Location = new Point(20, 45),
-                Width = 340,
-                DropDownStyle = ComboBoxStyle.DropDownList
+                Location = new Point(20, 75),
+                Width = 360,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Enabled = false
             };
             projectComboBox.DisplayMember = "Name";
             projectComboBox.ValueMember = "Id";
-            projectComboBox.DataSource = projects;
-
-            // Pre-select last used project
-            if (!string.IsNullOrEmpty(settings.LastProjectId))
-            {
-                var lastProject = projects.FirstOrDefault(p => p.Id == settings.LastProjectId);
-                if (lastProject != null)
-                {
-                    projectComboBox.SelectedItem = lastProject;
-                }
-            }
-
             Controls.Add(projectComboBox);
 
             // Name label
             var nameLabel = new Label
             {
                 Text = "Image name (optional):",
-                Location = new Point(20, 80),
+                Location = new Point(20, 110),
                 AutoSize = true
             };
             Controls.Add(nameLabel);
@@ -295,8 +291,8 @@ namespace VesselStudioSimplePlugin
             // Name textbox
             nameTextBox = new TextBox
             {
-                Location = new Point(20, 105),
-                Width = 340,
+                Location = new Point(20, 135),
+                Width = 360,
                 Text = $"Rhino Capture {DateTime.Now:HH:mm:ss}"
             };
             Controls.Add(nameTextBox);
@@ -305,9 +301,10 @@ namespace VesselStudioSimplePlugin
             okButton = new Button
             {
                 Text = "Capture && Upload",
-                Location = new Point(180, 140),
+                Location = new Point(180, 170),
                 Width = 120,
-                DialogResult = DialogResult.OK
+                DialogResult = DialogResult.OK,
+                Enabled = false
             };
             okButton.Click += (s, e) =>
             {
@@ -322,7 +319,7 @@ namespace VesselStudioSimplePlugin
             cancelButton = new Button
             {
                 Text = "Cancel",
-                Location = new Point(310, 140),
+                Location = new Point(310, 170),
                 Width = 70,
                 DialogResult = DialogResult.Cancel
             };
@@ -330,6 +327,56 @@ namespace VesselStudioSimplePlugin
 
             AcceptButton = okButton;
             CancelButton = cancelButton;
+        }
+
+        private async void LoadProjectsAsync()
+        {
+            try
+            {
+                _projects = await _apiClient.GetProjectsAsync();
+
+                if (_projects == null || _projects.Count == 0)
+                {
+                    statusLabel.Text = "❌ No projects found. Create a project at vesselstudio.io first.";
+                    statusLabel.ForeColor = Color.Red;
+                    return;
+                }
+
+                // Update UI on UI thread
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() => PopulateProjects()));
+                }
+                else
+                {
+                    PopulateProjects();
+                }
+            }
+            catch (Exception ex)
+            {
+                statusLabel.Text = $"❌ Error loading projects: {ex.Message}";
+                statusLabel.ForeColor = Color.Red;
+            }
+        }
+
+        private void PopulateProjects()
+        {
+            projectComboBox.DataSource = _projects;
+            projectComboBox.Enabled = true;
+            okButton.Enabled = true;
+
+            // Pre-select last used project
+            if (!string.IsNullOrEmpty(_settings.LastProjectId))
+            {
+                var lastProject = _projects.FirstOrDefault(p => p.Id == _settings.LastProjectId);
+                if (lastProject != null)
+                {
+                    projectComboBox.SelectedItem = lastProject;
+                }
+            }
+
+            statusLabel.Text = $"✅ {_projects.Count} project(s) loaded";
+            statusLabel.ForeColor = Color.Green;
         }
     }
 }

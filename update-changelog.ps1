@@ -105,13 +105,12 @@ function Suggest-ChangelogUpdate {
 }
 
 function Get-CurrentVersion {
-    $versionFile = Join-Path $PSScriptRoot "VesselStudioPlugin\Models\PluginVersion.cs"
+    $versionFile = Join-Path $PSScriptRoot "VesselStudioSimplePlugin\Properties\AssemblyInfo.cs"
     if (Test-Path $versionFile) {
         $content = Get-Content $versionFile -Raw
-        if ($content -match 'public const int Major = (\d+)') { $major = $matches[1] }
-        if ($content -match 'public const int Minor = (\d+)') { $minor = $matches[1] }
-        if ($content -match 'public const int Patch = (\d+)') { $patch = $matches[1] }
-        return "$major.$minor.$patch"
+        if ($content -match 'AssemblyVersion\("(\d+)\.(\d+)\.(\d+)\.(\d+)"\)') {
+            return "$($matches[1]).$($matches[2]).$($matches[3])"
+        }
     }
     return "Unknown"
 }

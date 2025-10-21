@@ -56,19 +56,21 @@ Write-Host ""
 if (-not $SkipVersionCheck) {
     Write-Host "Step 2: Checking version information..." -ForegroundColor Yellow
     
-    $versionFile = "$scriptRoot\VesselStudioPlugin\Models\PluginVersion.cs"
+    $versionFile = "$scriptRoot\VesselStudioSimplePlugin\Properties\AssemblyInfo.cs"
     if (Test-Path $versionFile) {
         $content = Get-Content $versionFile -Raw
         
         # Extract version numbers
-        if ($content -match 'public const int Major = (\d+);') { $major = $Matches[1] }
-        if ($content -match 'public const int Minor = (\d+);') { $minor = $Matches[1] }
-        if ($content -match 'public const int Patch = (\d+);') { $patch = $Matches[1] }
+        if ($content -match 'AssemblyVersion\("(\d+)\.(\d+)\.(\d+)\.(\d+)"\)') {
+            $major = $Matches[1]
+            $minor = $Matches[2]
+            $patch = $Matches[3]
+        }
         
         Write-Host "  Current Version: $major.$minor.$patch" -ForegroundColor Cyan
         
         # Check CHANGELOG.md for matching version
-        $changelogFile = "$scriptRoot\CHANGELOG.md"
+        $changelogFile = "$scriptRoot\docs\reference\CHANGELOG.md"
         if (Test-Path $changelogFile) {
             $changelog = Get-Content $changelogFile -Raw
             if ($changelog -match "## \[($major\.$minor\.$patch)\]") {
@@ -81,7 +83,7 @@ if (-not $SkipVersionCheck) {
         }
     }
     else {
-        Write-Host "  Warning: PluginVersion.cs not found" -ForegroundColor Yellow
+        Write-Host "  Warning: AssemblyInfo.cs not found" -ForegroundColor Yellow
     }
 }
 else {
@@ -113,24 +115,24 @@ else {
 Write-Host ""
 
 # ============================================================================
-# Step 4: Build Solution
+# Step 4: Build Project
 # ============================================================================
-Write-Host "Step 4: Building solution..." -ForegroundColor Yellow
+Write-Host "Step 4: Building project..." -ForegroundColor Yellow
 
-$solutionFile = "$scriptRoot\VesselStudioPlugin.sln"
+$projectFile = "$scriptRoot\VesselStudioSimplePlugin\VesselStudioSimplePlugin.csproj"
 
-if (-not (Test-Path $solutionFile)) {
-    Write-Host "Error: Solution file not found at $solutionFile" -ForegroundColor Red
+if (-not (Test-Path $projectFile)) {
+    Write-Host "Error: Project file not found at $projectFile" -ForegroundColor Red
     exit 1
 }
 
 Write-Host "  Configuration: $Configuration" -ForegroundColor Cyan
-Write-Host "  Solution: VesselStudioPlugin.sln" -ForegroundColor Cyan
+Write-Host "  Project: VesselStudioSimplePlugin.csproj" -ForegroundColor Cyan
 Write-Host ""
 
 $buildArgs = @(
     "build",
-    $solutionFile,
+    $projectFile,
     "--configuration", $Configuration,
     "--no-incremental"
 )
@@ -160,13 +162,13 @@ catch {
 Write-Host ""
 
 # ============================================================================
-# Step 5: Build Summary
+# Step 5: Build Summary & Verification
 # ============================================================================
 Write-Host "=== Build Summary ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Find generated .rhp files
-$rhpFiles = Get-ChildItem -Path "$scriptRoot\VesselStudioPlugin\bin\$Configuration" -Filter "*.rhp" -Recurse -ErrorAction SilentlyContinue
+$rhpFiles = Get-ChildItem -Path "$scriptRoot\VesselStudioSimplePlugin\bin\$Configuration" -Filter "*.rhp" -Recurse -ErrorAction SilentlyContinue
 
 if ($rhpFiles) {
     Write-Host "Plugin files generated:" -ForegroundColor Green
@@ -176,14 +178,64 @@ if ($rhpFiles) {
         Write-Host "  • $framework\$($rhp.Name) ($size KB)" -ForegroundColor Cyan
     }
     
+    # Verify RhinoCommon is NOT included
+    Write-Host ""
+    Write-Host "Verifying build output..." -ForegroundColor Yellow
+    
+    $binPath = $rhpFiles[0].DirectoryName
+    $rhinoCommonDll = Join-Path $binPath "RhinoCommon.dll"
+    $etoDll = Join-Path $binPath "Eto.dll"
+    $rhinoUIDll = Join-Path $binPath "Rhino.UI.dll"
+    
+    $hasIssues = $false
+    
+    if (Test-Path $rhinoCommonDll) {
+        Write-Host "  ⚠ WARNING: RhinoCommon.dll found in output (should be excluded)" -ForegroundColor Red
+        $hasIssues = $true
+    }
+    else {
+        Write-Host "  ✓ RhinoCommon.dll excluded (correct)" -ForegroundColor Green
+    }
+    
+    if (Test-Path $etoDll) {
+        Write-Host "  ⚠ WARNING: Eto.dll found in output (should be excluded)" -ForegroundColor Red
+        $hasIssues = $true
+    }
+    else {
+        Write-Host "  ✓ Eto.dll excluded (correct)" -ForegroundColor Green
+    }
+    
+    if (Test-Path $rhinoUIDll) {
+        Write-Host "  ⚠ WARNING: Rhino.UI.dll found in output (should be excluded)" -ForegroundColor Red
+        $hasIssues = $true
+    }
+    else {
+        Write-Host "  ✓ Rhino.UI.dll excluded (correct)" -ForegroundColor Green
+    }
+    
+    # Check for required DLLs
+    $newtonsoftDll = Join-Path $binPath "Newtonsoft.Json.dll"
+    if (Test-Path $newtonsoftDll) {
+        Write-Host "  ✓ Newtonsoft.Json.dll included (correct)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "  ⚠ WARNING: Newtonsoft.Json.dll not found" -ForegroundColor Yellow
+    }
+    
+    if ($hasIssues) {
+        Write-Host ""
+        Write-Host "Build output has issues! RhinoCommon/Eto DLLs should not be copied." -ForegroundColor Red
+        Write-Host "Check post-build events in .csproj file." -ForegroundColor Yellow
+    }
+    
     Write-Host ""
     Write-Host "Installation:" -ForegroundColor Yellow
     Write-Host "  1. Close Rhino" -ForegroundColor Gray
     Write-Host "  2. Copy .rhp file to Rhino plugin directory or drag-drop into Rhino" -ForegroundColor Gray
     Write-Host "  3. Start Rhino and test commands:" -ForegroundColor Gray
-    Write-Host "     - VesselAbout" -ForegroundColor Gray
+    Write-Host "     - VesselStudioAbout" -ForegroundColor Gray
     Write-Host "     - VesselSetApiKey" -ForegroundColor Gray
-    Write-Host "     - VesselStatus" -ForegroundColor Gray
+    Write-Host "     - VesselStudioStatus" -ForegroundColor Gray
     Write-Host "     - VesselCapture" -ForegroundColor Gray
 }
 else {
@@ -195,12 +247,17 @@ Write-Host "Build completed at $(Get-Date -Format 'HH:mm:ss')" -ForegroundColor 
 Write-Host ""
 
 # ============================================================================
-# Quick reload option for development
+# Optional: Stage changes for commit
 # ============================================================================
-if (Test-Path "$scriptRoot\reload-plugin.ps1") {
-    $reload = Read-Host "Reload plugin in Rhino? (y/N)"
-    if ($reload -eq 'y' -or $reload -eq 'Y') {
+$uncommitted = git status --short 2>$null
+if ($uncommitted) {
+    Write-Host ""
+    $stageChanges = Read-Host "Stage all changes for commit? (y/N)"
+    if ($stageChanges -eq 'y' -or $stageChanges -eq 'Y') {
+        git add -A
+        Write-Host "  ✓ Changes staged" -ForegroundColor Green
         Write-Host ""
-        & "$scriptRoot\reload-plugin.ps1"
+        Write-Host "Commit message suggestion based on changelog:" -ForegroundColor Yellow
+        Write-Host "  git commit -m 'Add About dialog, fix capture UX and FormData upload'" -ForegroundColor Cyan
     }
 }

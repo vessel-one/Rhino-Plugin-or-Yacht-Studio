@@ -108,6 +108,21 @@ namespace VesselStudioSimplePlugin
                 catch { }
             };
             this.Controls.Add(docLink);
+
+            // About link
+            var aboutLink = new LinkLabel
+            {
+                Text = "ℹ About Plugin",
+                Location = new Point(10, 310),
+                Size = new Size(260, 20),
+                Font = new Font("Segoe UI", 9),
+                LinkColor = Color.FromArgb(70, 130, 180)
+            };
+            aboutLink.LinkClicked += (s, e) =>
+            {
+                RhinoApp.RunScript("VesselStudioAbout", false);
+            };
+            this.Controls.Add(aboutLink);
         }
 
         private Button CreateButton(string text, int x, int y, EventHandler onClick)

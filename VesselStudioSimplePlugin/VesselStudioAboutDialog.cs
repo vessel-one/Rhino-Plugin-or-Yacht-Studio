@@ -36,24 +36,23 @@ namespace VesselStudioSimplePlugin
             const int padding = 20;
             int yPos = 0;
 
-            // Logo/Header
+            // Logo/Header - simple text on blue background, no bounding box
             var headerPanel = new Panel
             {
                 Location = new Point(0, yPos),
                 Width = contentWidth + (padding * 2),
-                Height = 100,
-                BackColor = Color.FromArgb(37, 99, 235), // Blue
-                Padding = new Padding(padding, 15, padding, 15)
+                Height = 85,
+                BackColor = Color.FromArgb(37, 99, 235) // Vessel Studio blue
             };
             Controls.Add(headerPanel);
 
             var titleLabel = new Label
             {
                 Text = "Vessel Studio",
-                Location = new Point(padding, 18),
+                Location = new Point(padding, 15),
                 Width = contentWidth,
                 AutoSize = true,
-                Font = new Font("Segoe UI", 18f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 20f, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent
             };
@@ -62,7 +61,7 @@ namespace VesselStudioSimplePlugin
             var subtitleLabel = new Label
             {
                 Text = "Rhino Plugin",
-                Location = new Point(padding, 55),
+                Location = new Point(padding, 52),
                 Width = contentWidth,
                 AutoSize = true,
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),

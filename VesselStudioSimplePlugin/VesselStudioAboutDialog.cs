@@ -99,7 +99,7 @@ namespace VesselStudioSimplePlugin
             // Description with wrapping
             var descriptionLabel = new Label
             {
-                Text = "Capture and share your yacht designs with the Vessel Studio platform. Upload viewport screenshots, manage projects, and collaborate with your team.",
+                Text = "Send design views straight from your Rhino viewport into your Vessel Studio project. Visualise designs in a fraction of a second, make amendments and refine. For better client and designer outcomes.",
                 Location = new Point(padding, yPos),
                 Width = contentWidth,
                 MaximumSize = new Size(contentWidth, 0),
@@ -125,11 +125,11 @@ namespace VesselStudioSimplePlugin
 
             var featuresText = new Label
             {
-                Text = "• Viewport Screenshot Capture\n" +
-                       "• Secure API Key Authentication\n" +
-                       "• Project Management Integration\n" +
-                       "• Automatic Metadata Collection\n" +
-                       "• Cross-platform Support (Windows & Mac)",
+                Text = "• One-click viewport capture\n" +
+                       "• Direct upload to Vessel Studio projects\n" +
+                       "• Secure API authentication\n" +
+                       "• Automatic capture metadata (viewport, display mode, version)\n" +
+                       "• Quick capture to last-used project",
                 Location = new Point(padding + 20, yPos),
                 Width = contentWidth - 20,
                 MaximumSize = new Size(contentWidth - 20, 0),

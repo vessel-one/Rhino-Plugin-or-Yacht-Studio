@@ -19,45 +19,6 @@ namespace VesselStudioSimplePlugin
         private Label _statusLabel;
         private Panel _statusPanel;
 
-        public static Bitmap PanelIcon
-        {
-            get
-            {
-                // Create a distinctive icon (32x32) with "VS" text
-                var icon = new Bitmap(32, 32);
-                using (var g = Graphics.FromImage(icon))
-                {
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-                    
-                    // Background - Vessel One blue
-                    using (var brush = new SolidBrush(Color.FromArgb(70, 130, 180)))
-                    {
-                        g.FillRectangle(brush, 0, 0, 32, 32);
-                    }
-                    
-                    // Draw "VS" text in white
-                    using (var font = new Font("Arial", 14, FontStyle.Bold))
-                    using (var textBrush = new SolidBrush(Color.White))
-                    {
-                        var format = new StringFormat
-                        {
-                            Alignment = StringAlignment.Center,
-                            LineAlignment = StringAlignment.Center
-                        };
-                        g.DrawString("VS", font, textBrush, new RectangleF(0, 0, 32, 32), format);
-                    }
-                    
-                    // Add subtle border
-                    using (var pen = new Pen(Color.FromArgb(50, 90, 130), 2))
-                    {
-                        g.DrawRectangle(pen, 1, 1, 30, 30);
-                    }
-                }
-                return icon;
-            }
-        }
-
         public VesselStudioToolbarPanel()
         {
             InitializeComponents();
@@ -107,13 +68,13 @@ namespace VesselStudioSimplePlugin
             this.Controls.Add(_settingsButton);
 
             // Capture button
-            _captureButton = CreateButton("📷 Capture Screenshot", 10, 140, OnCaptureClick);
+            _captureButton = CreateButton("📷 Capture Screenshot", 10, 145, OnCaptureClick);
             _captureButton.BackColor = Color.FromArgb(76, 175, 80);
             _captureButton.ForeColor = Color.White;
             this.Controls.Add(_captureButton);
 
             // Quick capture button
-            _quickCaptureButton = CreateButton("⚡ Quick Capture", 10, 180, OnQuickCaptureClick);
+            _quickCaptureButton = CreateButton("⚡ Quick Capture", 10, 190, OnQuickCaptureClick);
             _quickCaptureButton.BackColor = Color.FromArgb(255, 152, 0);
             _quickCaptureButton.ForeColor = Color.White;
             this.Controls.Add(_quickCaptureButton);
@@ -122,8 +83,8 @@ namespace VesselStudioSimplePlugin
             var helpLabel = new Label
             {
                 Text = "Quick Capture saves to\nthe last used project",
-                Location = new Point(10, 230),
-                Size = new Size(260, 40),
+                Location = new Point(10, 240),
+                Size = new Size(260, 35),
                 Font = new Font("Segoe UI", 8),
                 ForeColor = Color.Gray
             };
@@ -133,7 +94,7 @@ namespace VesselStudioSimplePlugin
             var docLink = new LinkLabel
             {
                 Text = "📖 View Documentation",
-                Location = new Point(10, 280),
+                Location = new Point(10, 285),
                 Size = new Size(260, 20),
                 Font = new Font("Segoe UI", 9),
                 LinkColor = Color.FromArgb(70, 130, 180)
@@ -142,7 +103,7 @@ namespace VesselStudioSimplePlugin
             {
                 try
                 {
-                    System.Diagnostics.Process.Start("https://vessel.one/docs/rhino-plugin");
+                    System.Diagnostics.Process.Start("https://vesselstudio.io/docs/rhino-plugin");
                 }
                 catch { }
             };
@@ -176,12 +137,7 @@ namespace VesselStudioSimplePlugin
             var settings = VesselStudioSettings.Load();
             if (string.IsNullOrEmpty(settings?.ApiKey))
             {
-                MessageBox.Show(
-                    "Please set your API key first using the '⚙ Set API Key' button.",
-                    "API Key Required",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                RhinoApp.WriteLine("❌ Please set your API key first. Run VesselSetApiKey command or use the '⚙ Set API Key' button.");
                 return;
             }
 
@@ -193,23 +149,13 @@ namespace VesselStudioSimplePlugin
             var settings = VesselStudioSettings.Load();
             if (string.IsNullOrEmpty(settings?.ApiKey))
             {
-                MessageBox.Show(
-                    "Please set your API key first using the '⚙ Set API Key' button.",
-                    "API Key Required",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                RhinoApp.WriteLine("❌ Please set your API key first. Run VesselSetApiKey command or use the '⚙ Set API Key' button.");
                 return;
             }
 
             if (string.IsNullOrEmpty(settings.LastProjectId))
             {
-                MessageBox.Show(
-                    "Please use 'Capture Screenshot' at least once to select a project.",
-                    "No Project Selected",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                RhinoApp.WriteLine("❌ Please use 'Capture Screenshot' at least once to select a project.");
                 return;
             }
 

@@ -1,12 +1,12 @@
 using System;
+using System.Windows.Forms;
 using Rhino;
 using Rhino.Commands;
-using Rhino.Input;
 
 namespace VesselStudioSimplePlugin
 {
     /// <summary>
-    /// Command to set/update the Vessel One API key
+    /// Command to set/update the Vessel Studio API key
     /// </summary>
     [System.Runtime.InteropServices.Guid("C2D3E4F5-A6B7-8C9D-0E1F-2A3B4C5D6E7F")]
     public class VesselStudioSetApiKeyCommand : Command
@@ -22,61 +22,23 @@ namespace VesselStudioSimplePlugin
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            // Prompt user for API key
-            string apiKey = string.Empty;
-            var rc = RhinoGet.GetString("Enter Vessel One API key (vsk_live_...)", false, ref apiKey);
+            // Load current settings
+            var settings = VesselStudioSettings.Load();
             
-            if (rc != Result.Success || string.IsNullOrWhiteSpace(apiKey))
+            // Show settings dialog
+            using (var dialog = new VesselStudioSettingsDialog(settings.ApiKey))
             {
-                RhinoApp.WriteLine("API key entry cancelled");
-                return Result.Cancel;
-            }
-
-            // Validate key format
-            if (!apiKey.StartsWith("vsk_"))
-            {
-                RhinoApp.WriteLine("❌ Invalid API key format. Key should start with 'vsk_live_' or 'vsk_test_'");
-                RhinoApp.WriteLine("Get your API key from: https://vessel.one/profile");
-                return Result.Failure;
-            }
-
-            // Create API client and validate
-            using (var apiClient = new VesselStudioApiClient())
-            {
-                apiClient.SetApiKey(apiKey);
-
-                RhinoApp.WriteLine("Validating API key with Vessel One...");
-                var validateTask = apiClient.ValidateApiKeyAsync();
-                validateTask.Wait();
+                var result = dialog.ShowDialog();
                 
-                var (success, userName) = validateTask.Result;
-                
-                if (success)
+                if (result == DialogResult.OK)
                 {
-                    // Save to settings
-                    var settings = VesselStudioSettings.Load();
-                    settings.ApiKey = apiKey;
-                    settings.Save();
-
-                    RhinoApp.WriteLine($"✅ Connected to Vessel One as: {userName}");
-                    RhinoApp.WriteLine("");
-                    RhinoApp.WriteLine("Next steps:");
-                    RhinoApp.WriteLine("  • Run 'VesselCapture' to upload a screenshot with project selection");
-                    RhinoApp.WriteLine("  • Run 'VesselQuickCapture' for rapid-fire captures to last project");
-                    RhinoApp.WriteLine("  • Run 'VesselStatus' to check connection");
-                    
+                    RhinoApp.WriteLine("✅ Vessel Studio API key configured successfully");
                     return Result.Success;
                 }
                 else
                 {
-                    RhinoApp.WriteLine("❌ Failed to validate API key");
-                    RhinoApp.WriteLine("");
-                    RhinoApp.WriteLine("Troubleshooting:");
-                    RhinoApp.WriteLine("  • Check that you copied the entire key");
-                    RhinoApp.WriteLine("  • Verify the key hasn't been revoked");
-                    RhinoApp.WriteLine("  • Create a new key at: https://vessel.one/profile");
-                    
-                    return Result.Failure;
+                    RhinoApp.WriteLine("API key configuration cancelled");
+                    return Result.Cancel;
                 }
             }
         }

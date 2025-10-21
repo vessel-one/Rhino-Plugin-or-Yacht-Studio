@@ -66,19 +66,54 @@ interface VesselOneApiKey {
 ```typescript
 // Collection: projects/{projectId}/gallery/{imageId}
 interface GalleryImage {
-  id: string;                    // Auto-generated document ID
+  id: string;                    // Screenshot ID from Rhino (GUID)
   projectId: string;
-  name: string;                  // User-provided image name
+  name: string;                  // Generated from viewport/display mode
   url: string;                   // Firebase Storage public URL
   source: string;                // "rhino-plugin" | "web-upload" | "mobile"
   uploadedBy: string;            // User ID
   uploadedAt: Timestamp;
+  compressionType: string;       // "Png" | "Jpeg"
+  quality: number | null;        // 1-100 for JPEG, null for PNG
   metadata: {
+    // Viewport info
+    viewportName: string;        // "Perspective", "Top", etc.
+    displayModeName: string;     // "Shaded", "Wireframe", "Rendered"
+    displayMode: string;         // Enum value
+    
+    // Dimensions
     width: number;
     height: number;
-    viewportName?: string;       // Rhino-specific
-    displayMode?: string;        // Rhino-specific
-    rhinoVersion?: string;       // Rhino-specific
+    
+    // Camera data (for 3D reconstruction/visualization)
+    cameraPosition: { x: number; y: number; z: number };
+    cameraTarget: { x: number; y: number; z: number };
+    cameraUp: { x: number; y: number; z: number };
+    cameraDirection: { x: number; y: number; z: number };
+    
+    // Projection settings
+    isPerspectiveProjection: boolean;
+    lensLength?: number;
+    fieldOfView?: number;
+    frustumNear: number;
+    frustumFar: number;
+    
+    // Construction plane
+    constructionPlaneOrigin: { x: number; y: number; z: number };
+    constructionPlaneNormal: { x: number; y: number; z: number };
+    
+    // Document/scene info
+    rhinoVersion: string;        // "8.0.23304.09305"
+    documentPath?: string;       // Full file path
+    documentName?: string;       // Filename
+    objectCount: number;         // Objects in scene
+    modelUnits: string;          // "Millimeters", "Meters", etc.
+    
+    // Timestamps
+    captureTimestamp: string;    // ISO 8601
+    
+    // Additional settings
+    displaySettings?: Record<string, any>;
   };
 }
 ```
@@ -361,9 +396,57 @@ export async function GET(request: Request) {
 **Purpose:** Upload viewport screenshot to project gallery
 
 **Request:** `multipart/form-data`
-- `image`: PNG file (binary)
-- `name`: Image name (string)
-- `metadata`: JSON string with viewport info
+- `image`: PNG or JPEG file (binary)
+- `metadata`: JSON string (ViewportMetadata object - see structure below)
+- `screenshotId`: GUID string (unique identifier for this capture)
+- `compressionType`: String enum ("Png" or "Jpeg")
+- `quality`: String number (1-100, JPEG quality if applicable)
+
+**Metadata JSON Structure:**
+```typescript
+{
+  // Basic viewport info
+  viewportName: string;           // e.g., "Perspective", "Top", "Front"
+  displayModeName: string;        // e.g., "Shaded", "Wireframe", "Rendered"
+  displayMode: string;            // Enum value
+  
+  // Viewport dimensions
+  viewportSize: {
+    width: number;
+    height: number;
+  };
+  
+  // Camera information
+  cameraPosition: { x: number; y: number; z: number };
+  cameraTarget: { x: number; y: number; z: number };
+  cameraUp: { x: number; y: number; z: number };
+  cameraDirection: { x: number; y: number; z: number };
+  
+  // Projection settings
+  isPerspectiveProjection: boolean;
+  lensLength?: number;            // Optional: for perspective views
+  fieldOfView?: number;           // Optional: FOV in radians
+  frustumNear: number;
+  frustumFar: number;
+  
+  // Construction plane
+  constructionPlaneOrigin: { x: number; y: number; z: number };
+  constructionPlaneNormal: { x: number; y: number; z: number };
+  
+  // Document info
+  rhinoVersion: string;           // e.g., "8.0.23304.09305"
+  documentPath?: string;          // Optional: full file path
+  documentName?: string;          // Optional: filename
+  objectCount: number;            // Number of objects in scene
+  modelUnits: string;             // e.g., "Millimeters", "Meters"
+  
+  // Timestamp
+  captureTimestamp: string;       // ISO 8601 format
+  
+  // Additional settings (optional)
+  displaySettings?: Record<string, any>;  // Key-value pairs
+}
+```
 
 **Response:**
 ```typescript
@@ -407,7 +490,9 @@ export async function POST(
   // Parse form data
   const formData = await request.formData();
   const imageFile = formData.get('image') as File;
-  const imageName = formData.get('name') as string || `Rhino Capture ${Date.now()}`;
+  const screenshotId = formData.get('screenshotId') as string;
+  const compressionType = formData.get('compressionType') as string;
+  const quality = formData.get('quality') as string;
   const metadataStr = formData.get('metadata') as string || '{}';
   const metadata = JSON.parse(metadataStr);
 
@@ -420,22 +505,40 @@ export async function POST(
     return Response.json({ error: 'Image too large (max 10MB)' }, { status: 400 });
   }
 
+  // Validate compression type
+  if (!['Png', 'Jpeg'].includes(compressionType)) {
+    return Response.json({ error: 'Invalid compression type' }, { status: 400 });
+  }
+
+  // Generate image name from metadata or use default
+  const imageName = metadata.viewportName 
+    ? `${metadata.viewportName} - ${metadata.displayModeName}` 
+    : `Rhino Capture ${Date.now()}`;
+
   try {
     // Upload to Firebase Storage
-    const imageId = nanoid();
+    const imageId = screenshotId || nanoid(); // Use Rhino's ID if provided
     const imageBuffer = await imageFile.arrayBuffer();
     const bucket = storage.bucket();
-    const filePath = `projects/${params.projectId}/gallery/${imageId}.png`;
+    const fileExtension = compressionType === 'Jpeg' ? 'jpg' : 'png';
+    const contentType = compressionType === 'Jpeg' ? 'image/jpeg' : 'image/png';
+    const filePath = `projects/${params.projectId}/gallery/${imageId}.${fileExtension}`;
     const file = bucket.file(filePath);
 
     await file.save(Buffer.from(imageBuffer), {
       metadata: {
-        contentType: 'image/png',
+        contentType,
         metadata: {
           uploadedBy: authResult.userId,
           uploadSource: 'rhino-plugin',
           originalName: imageName,
-          ...metadata,
+          screenshotId,
+          compressionType,
+          quality,
+          rhinoVersion: metadata.rhinoVersion,
+          viewportName: metadata.viewportName,
+          displayMode: metadata.displayModeName,
+          captureTimestamp: metadata.captureTimestamp,
         },
       },
     });
@@ -454,12 +557,47 @@ export async function POST(
       source: 'rhino-plugin',
       uploadedBy: authResult.userId,
       uploadedAt: new Date(),
+      compressionType,
+      quality: quality ? parseInt(quality) : null,
       metadata: {
-        width: metadata.width || 1920,
-        height: metadata.height || 1080,
+        // Viewport info
         viewportName: metadata.viewportName,
+        displayModeName: metadata.displayModeName,
         displayMode: metadata.displayMode,
+        
+        // Dimensions
+        width: metadata.viewportSize?.width || 1920,
+        height: metadata.viewportSize?.height || 1080,
+        
+        // Camera data
+        cameraPosition: metadata.cameraPosition,
+        cameraTarget: metadata.cameraTarget,
+        cameraUp: metadata.cameraUp,
+        cameraDirection: metadata.cameraDirection,
+        
+        // Projection
+        isPerspectiveProjection: metadata.isPerspectiveProjection,
+        lensLength: metadata.lensLength,
+        fieldOfView: metadata.fieldOfView,
+        frustumNear: metadata.frustumNear,
+        frustumFar: metadata.frustumFar,
+        
+        // Construction plane
+        constructionPlaneOrigin: metadata.constructionPlaneOrigin,
+        constructionPlaneNormal: metadata.constructionPlaneNormal,
+        
+        // Document info
         rhinoVersion: metadata.rhinoVersion,
+        documentPath: metadata.documentPath,
+        documentName: metadata.documentName,
+        objectCount: metadata.objectCount,
+        modelUnits: metadata.modelUnits,
+        
+        // Timestamp
+        captureTimestamp: metadata.captureTimestamp,
+        
+        // Additional settings
+        displaySettings: metadata.displaySettings,
       },
     };
 
@@ -725,7 +863,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               </p>
               {image.metadata?.viewportName && (
                 <p className="text-xs text-gray-400">
-                  {image.metadata.viewportName} • {image.metadata.displayMode}
+                  {image.metadata.viewportName} • {image.metadata.displayModeName}
+                  {image.metadata.objectCount && ` • ${image.metadata.objectCount} objects`}
+                </p>
+              )}
+              {image.compressionType === 'Jpeg' && image.quality && (
+                <p className="text-xs text-gray-500">
+                  JPEG Quality: {image.quality}%
                 </p>
               )}
             </div>
@@ -809,8 +953,10 @@ curl https://vessel.one/api/rhino/projects \
 curl -X POST https://vessel.one/api/rhino/projects/PROJECT_ID/upload \
   -H "Authorization: Bearer vsk_live_abc123..." \
   -F "image=@test.png" \
-  -F "name=Test Upload" \
-  -F 'metadata={"width":1920,"height":1080}'
+  -F "screenshotId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -F "compressionType=Png" \
+  -F "quality=95" \
+  -F 'metadata={"viewportName":"Perspective","displayModeName":"Shaded","viewportSize":{"width":1920,"height":1080},"rhinoVersion":"8.0.23304","cameraPosition":{"x":10,"y":10,"z":10},"cameraTarget":{"x":0,"y":0,"z":0},"cameraUp":{"x":0,"y":0,"z":1},"isPerspectiveProjection":true,"objectCount":42,"modelUnits":"Millimeters","captureTimestamp":"2025-10-21T12:00:00Z"}'
 ```
 
 ### 2. Integration Testing

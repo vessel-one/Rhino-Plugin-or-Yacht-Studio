@@ -39,7 +39,7 @@ namespace VesselStudioSimplePlugin
 
             if (projects == null || projects.Count == 0)
             {
-                RhinoApp.WriteLine("❌ No projects found. Create a project on vessel.one first.");
+                RhinoApp.WriteLine("❌ No projects found. Create a project at https://vesselstudio.io first.");
                 return Result.Failure;
             }
 

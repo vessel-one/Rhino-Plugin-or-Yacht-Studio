@@ -47,7 +47,7 @@ namespace VesselStudioSimplePlugin
             // Open documentation in default browser
             try
             {
-                System.Diagnostics.Process.Start("https://vessel.one/docs/rhino-plugin");
+                System.Diagnostics.Process.Start("https://vesselstudio.io/docs/rhino-plugin");
             }
             catch
             {
@@ -60,7 +60,7 @@ namespace VesselStudioSimplePlugin
                 RhinoApp.WriteLine("  VesselQuickCapture   - Quick capture to last project");
                 RhinoApp.WriteLine("  VesselStudioStatus   - Check connection status");
                 RhinoApp.WriteLine("");
-                RhinoApp.WriteLine("For more information, visit: https://vessel.one/docs");
+                RhinoApp.WriteLine("For more information, visit: https://vesselstudio.io/docs/rhino-plugin");
             }
 
             return Result.Success;

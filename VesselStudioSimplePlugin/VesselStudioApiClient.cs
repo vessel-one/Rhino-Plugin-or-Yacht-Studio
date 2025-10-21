@@ -29,7 +29,7 @@ namespace VesselStudioSimplePlugin
     public class VesselStudioApiClient : IDisposable
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://vessel.one/api"; // Update with actual production URL
+        private const string BaseUrl = "https://vesselstudio.io/api";
         private string _apiKey;
 
         public VesselStudioApiClient()
@@ -63,27 +63,92 @@ namespace VesselStudioSimplePlugin
         /// <summary>
         /// Validate API key with Vessel One backend
         /// </summary>
-        public async Task<(bool success, string userName)> ValidateApiKeyAsync()
+        public async Task<ValidationResult> ValidateApiKeyAsync()
         {
             if (!IsAuthenticated)
             {
-                return (false, null);
+                return new ValidationResult
+                {
+                    Success = false,
+                    ErrorMessage = "No API key set",
+                    ErrorDetails = "Authentication required"
+                };
             }
 
             try
             {
+                RhinoApp.WriteLine($"Attempting connection to: {BaseUrl}/rhino/validate");
+                RhinoApp.WriteLine($"Authorization: Bearer {_apiKey.Substring(0, Math.Min(10, _apiKey.Length))}...");
+                
                 var response = await _httpClient.PostAsync("/rhino/validate", null);
+                
+                RhinoApp.WriteLine($"Response status: {(int)response.StatusCode} {response.StatusCode}");
+                
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
+                    RhinoApp.WriteLine($"Response body: {json}");
+                    
                     var result = JsonConvert.DeserializeObject<dynamic>(json);
-                    return (true, result.userName?.ToString());
+                    return new ValidationResult
+                    {
+                        Success = true,
+                        UserName = result.userName?.ToString(),
+                        ErrorMessage = null,
+                        ErrorDetails = null
+                    };
                 }
-                return (false, null);
+                else
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    RhinoApp.WriteLine($"Error response body: {errorBody}");
+                    
+                    return new ValidationResult
+                    {
+                        Success = false,
+                        ErrorMessage = $"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}",
+                        ErrorDetails = errorBody
+                    };
+                }
             }
-            catch
+            catch (HttpRequestException ex)
             {
-                return (false, null);
+                RhinoApp.WriteLine($"HTTP Request Exception: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    RhinoApp.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                
+                return new ValidationResult
+                {
+                    Success = false,
+                    ErrorMessage = "Connection failed",
+                    ErrorDetails = $"Could not reach {BaseUrl}\n{ex.Message}"
+                };
+            }
+            catch (TaskCanceledException ex)
+            {
+                RhinoApp.WriteLine($"Request timeout: {ex.Message}");
+                
+                return new ValidationResult
+                {
+                    Success = false,
+                    ErrorMessage = "Request timeout",
+                    ErrorDetails = $"Server did not respond within 30 seconds\n{ex.Message}"
+                };
+            }
+            catch (Exception ex)
+            {
+                RhinoApp.WriteLine($"Unexpected error: {ex.GetType().Name}");
+                RhinoApp.WriteLine($"Message: {ex.Message}");
+                RhinoApp.WriteLine($"Stack trace: {ex.StackTrace}");
+                
+                return new ValidationResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Unexpected error: {ex.GetType().Name}",
+                    ErrorDetails = ex.Message
+                };
             }
         }
 
@@ -290,5 +355,16 @@ namespace VesselStudioSimplePlugin
         public bool Success { get; set; }
         public string Message { get; set; }
         public string Url { get; set; }
+    }
+
+    /// <summary>
+    /// Result of API key validation with detailed error information
+    /// </summary>
+    public class ValidationResult
+    {
+        public bool Success { get; set; }
+        public string UserName { get; set; }
+        public string ErrorMessage { get; set; }
+        public string ErrorDetails { get; set; }
     }
 }

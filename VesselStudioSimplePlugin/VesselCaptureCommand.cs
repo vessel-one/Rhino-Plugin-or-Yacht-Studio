@@ -41,44 +41,66 @@ namespace VesselStudioSimplePlugin
             var selectedProject = dialog.SelectedProject;
             var imageName = dialog.ImageName;
 
-            // Perform capture
+            // Perform capture (fast - just takes screenshot)
             RhinoApp.WriteLine($"📸 Capturing viewport...");
-            var captureResult = PerformCapture(doc, apiClient, selectedProject.Id, imageName);
-
-            if (captureResult.success)
+            var captureData = CaptureViewport(doc);
+            
+            if (captureData.imageBytes == null)
             {
-                RhinoApp.WriteLine($"✅ {captureResult.message}");
-                RhinoApp.WriteLine($"📷 View at: {captureResult.imageUrl}");
-                
-                // Save last used project
-                settings.LastProjectId = selectedProject.Id;
-                settings.LastProjectName = selectedProject.Name;
-                settings.Save();
-                
-                return Result.Success;
-            }
-            else
-            {
-                RhinoApp.WriteLine($"❌ {captureResult.message}");
+                RhinoApp.WriteLine("❌ Failed to capture viewport");
                 return Result.Failure;
             }
+            
+            // Save last used project immediately
+            settings.LastProjectId = selectedProject.Id;
+            settings.LastProjectName = selectedProject.Name;
+            settings.Save();
+            
+            // Start upload in background - don't block Rhino!
+            RhinoApp.WriteLine($"📤 Uploading in background to {selectedProject.Name}...");
+            RhinoApp.WriteLine("💡 You can continue working - upload happens in background");
+            
+            System.Threading.Tasks.Task.Run(async () =>
+            {
+                try
+                {
+                    var result = await apiClient.UploadScreenshotAsync(
+                        selectedProject.Id,
+                        captureData.imageBytes,
+                        imageName,
+                        captureData.metadata
+                    );
+                    
+                    if (result.Success)
+                    {
+                        RhinoApp.WriteLine($"✅ Upload complete!");
+                        RhinoApp.WriteLine($"📷 View at: {result.Url}");
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine($"❌ Upload failed: {result.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    RhinoApp.WriteLine($"❌ Upload error: {ex.Message}");
+                }
+            });
+            
+            return Result.Success;
         }
 
-        private (bool success, string message, string imageUrl) PerformCapture(
-            RhinoDoc doc,
-            VesselStudioApiClient apiClient,
-            string projectId,
-            string imageName)
+        private (byte[] imageBytes, Dictionary<string, object> metadata) CaptureViewport(RhinoDoc doc)
         {
             try
             {
                 var view = doc.Views.ActiveView;
                 if (view == null)
                 {
-                    return (false, "No active viewport", null);
+                    return (null, null);
                 }
 
-                // Capture viewport as bitmap
+                // Capture viewport as bitmap (fast operation)
                 var bitmap = view.CaptureToBitmap(new Size(1920, 1080));
                 
                 // Convert to byte array
@@ -100,22 +122,12 @@ namespace VesselStudioSimplePlugin
                     { "captureTime", DateTime.UtcNow.ToString("o") }
                 };
 
-                // Upload
-                var uploadTask = apiClient.UploadScreenshotAsync(
-                    projectId,
-                    imageBytes,
-                    imageName,
-                    metadata
-                );
-
-                uploadTask.Wait();
-                var result = uploadTask.Result;
-
-                return (result.Success, result.Message, result.Url);
+                return (imageBytes, metadata);
             }
             catch (Exception ex)
             {
-                return (false, $"Capture error: {ex.Message}", null);
+                RhinoApp.WriteLine($"❌ Capture error: {ex.Message}");
+                return (null, null);
             }
         }
     }
@@ -148,27 +160,72 @@ namespace VesselStudioSimplePlugin
             
             RhinoApp.WriteLine($"📸 Quick capturing to {settings.LastProjectName}...");
 
-            var view = doc.Views.ActiveView;
-            if (view == null)
+            // Capture viewport (fast operation)
+            var captureData = CaptureViewportForQuickCapture(doc);
+            
+            if (captureData.imageBytes == null)
             {
-                RhinoApp.WriteLine("❌ No active viewport");
+                RhinoApp.WriteLine("❌ No active viewport or capture failed");
                 return Result.Failure;
             }
 
+            // Auto-generate name with timestamp
+            var imageName = $"Quick Capture {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            
+            // Start background upload immediately - don't block!
+            RhinoApp.WriteLine($"📤 Uploading in background...");
+            RhinoApp.WriteLine("💡 You can continue working - upload happens in background");
+            
+            System.Threading.Tasks.Task.Run(async () =>
+            {
+                try
+                {
+                    var result = await apiClient.UploadScreenshotAsync(
+                        settings.LastProjectId,
+                        captureData.imageBytes,
+                        imageName,
+                        captureData.metadata
+                    );
+
+                    if (result.Success)
+                    {
+                        RhinoApp.WriteLine($"✅ Quick capture upload complete!");
+                        RhinoApp.WriteLine($"📷 View at: {result.Url}");
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine($"❌ Upload failed: {result.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    RhinoApp.WriteLine($"❌ Upload error: {ex.Message}");
+                }
+            });
+            
+            return Result.Success;
+        }
+        
+        private (byte[] imageBytes, Dictionary<string, object> metadata) CaptureViewportForQuickCapture(RhinoDoc doc)
+        {
             try
             {
-                // Capture viewport
+                var view = doc.Views.ActiveView;
+                if (view == null)
+                {
+                    return (null, null);
+                }
+
+                // Capture viewport as bitmap
                 var bitmap = view.CaptureToBitmap(new Size(1920, 1080));
                 
+                // Convert to byte array
                 byte[] imageBytes;
                 using (var ms = new MemoryStream())
                 {
                     bitmap.Save(ms, ImageFormat.Png);
                     imageBytes = ms.ToArray();
                 }
-
-                // Auto-generate name with timestamp
-                var imageName = $"Quick Capture {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
 
                 // Gather metadata
                 var metadata = new Dictionary<string, object>
@@ -181,32 +238,12 @@ namespace VesselStudioSimplePlugin
                     { "captureTime", DateTime.UtcNow.ToString("o") }
                 };
 
-                // Upload
-                var uploadTask = apiClient.UploadScreenshotAsync(
-                    settings.LastProjectId,
-                    imageBytes,
-                    imageName,
-                    metadata
-                );
-
-                uploadTask.Wait();
-                var result = uploadTask.Result;
-
-                if (result.Success)
-                {
-                    RhinoApp.WriteLine($"✅ {result.Message}");
-                    return Result.Success;
-                }
-                else
-                {
-                    RhinoApp.WriteLine($"❌ {result.Message}");
-                    return Result.Failure;
-                }
+                return (imageBytes, metadata);
             }
             catch (Exception ex)
             {
-                RhinoApp.WriteLine($"❌ Error: {ex.Message}");
-                return Result.Failure;
+                RhinoApp.WriteLine($"❌ Capture error: {ex.Message}");
+                return (null, null);
             }
         }
     }

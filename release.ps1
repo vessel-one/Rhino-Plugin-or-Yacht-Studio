@@ -173,8 +173,8 @@ else {
     
     $publishArgs = @{}
     $publishArgs['PackageFile'] = $packageFile
+    $publishArgs['Force'] = $true  # Always force - user already consented by running release.ps1
     if ($TestServer) { $publishArgs['TestServer'] = $true }
-    if ($Force) { $publishArgs['Force'] = $true }
     
     & "$PSScriptRoot\publish-package.ps1" @publishArgs
     

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-10-21
+
+### Fixed
+- **About Dialog**: Adjusted subtitle position to prevent text overlap with main title
+- **Icon Loading**: Fixed COM error in VesselStudioDebugIcons command by properly disposing icon handles
+
+## [1.1.0] - 2025-10-21
+
 ### Added
 - **About Dialog**: GUI showing version info, features, and links
 - **Enhanced Capture UX**: Loading feedback visible in capture dialog

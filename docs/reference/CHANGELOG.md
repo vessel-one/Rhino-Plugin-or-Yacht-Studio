@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Capture Freeze**: Screenshot capture and upload now happens in background - Rhino no longer freezes
+- **Quick Capture Freeze**: Quick capture uploads asynchronously - immediate return to work
+- **Server Busy Dialog**: Eliminated blocking dialogs by removing synchronous upload waits
+- **User Experience**: Added feedback messages ("Upload happens in background") for clarity
+
+### Changed
+- **Async Uploads**: Both VesselCapture and VesselQuickCapture now upload in background threads
+- **Instant Response**: Commands return immediately after screenshot, upload continues independently
+
 ## [1.1.1] - 2025-10-21
 
 ### Fixed

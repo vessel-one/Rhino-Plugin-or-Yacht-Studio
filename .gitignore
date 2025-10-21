@@ -72,6 +72,9 @@ msbuild.wrn
 # Rhino plugin specific
 *.rhp
 
+# Package distribution (generated files)
+dist/
+
 # Universal patterns
 .DS_Store
 Thumbs.db

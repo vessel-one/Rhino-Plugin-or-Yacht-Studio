@@ -1,0 +1,27 @@
+---
+# Vessel Studio Rhino Plugin - Package Manifest
+# This file defines the package metadata for distribution via Rhino Package Manager (Yak)
+# Reference: https://developer.rhino3d.com/guides/yak/the-package-manifest/
+
+name: vesselstudio
+version: 1.0.0
+authors:
+  - Creata Collective Limited
+description: >
+  Send design views straight from your Rhino viewport into your Vessel Studio project.
+  Visualise designs in a fraction of a second, make amendments and refine.
+  For better client and designer outcomes.
+url: https://vesselstudio.io
+icon: icon.png
+keywords:
+  - vessel
+  - studio
+  - yacht
+  - marine
+  - design
+  - capture
+  - viewport
+  - screenshot
+  - upload
+  - visualization
+  - guid:A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D

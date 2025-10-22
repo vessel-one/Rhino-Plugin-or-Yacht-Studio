@@ -16,7 +16,11 @@ namespace VesselStudioSimplePlugin
 
         private static string SettingsPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "VesselStudio",
+#if DEV
+            "VesselStudioDEV",  // Separate folder for DEV builds
+#else
+            "VesselStudio",     // Production folder
+#endif
             "settings.json"
         );
 

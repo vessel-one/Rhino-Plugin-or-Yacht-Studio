@@ -11,11 +11,15 @@ using System.Windows.Forms;
 namespace VesselStudioSimplePlugin
 {
     /// <summary>
-    /// Enhanced capture command with project selection dialog
+    /// Enhanced capture command with image name dialog only (uses project from toolbar)
     /// </summary>
     public class VesselCaptureCommand : Command
     {
+#if DEV
+        public override string EnglishName => "DevVesselCapture";
+#else
         public override string EnglishName => "VesselCapture";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -28,17 +32,19 @@ namespace VesselStudioSimplePlugin
                 return Result.Failure;
             }
 
-            var apiClient = new VesselStudioApiClient();
-            apiClient.SetApiKey(settings.ApiKey);
+            if (string.IsNullOrEmpty(settings.LastProjectId))
+            {
+                RhinoApp.WriteLine("❌ No project selected. Please select a project from the toolbar dropdown.");
+                return Result.Failure;
+            }
 
-            // Show dialog immediately with loading state
-            var dialog = new CaptureDialog(apiClient, settings);
+            // Simple dialog for image name only
+            var dialog = new ImageNameDialog();
             if (dialog.ShowDialog() != DialogResult.OK)
             {
                 return Result.Cancel;
             }
 
-            var selectedProject = dialog.SelectedProject;
             var imageName = dialog.ImageName;
 
             // Perform capture (fast - just takes screenshot)
@@ -51,13 +57,11 @@ namespace VesselStudioSimplePlugin
                 return Result.Failure;
             }
             
-            // Save last used project immediately
-            settings.LastProjectId = selectedProject.Id;
-            settings.LastProjectName = selectedProject.Name;
-            settings.Save();
+            var apiClient = new VesselStudioApiClient();
+            apiClient.SetApiKey(settings.ApiKey);
             
             // Start upload in background - don't block Rhino!
-            RhinoApp.WriteLine($"📤 Uploading in background to {selectedProject.Name}...");
+            RhinoApp.WriteLine($"📤 Uploading to {settings.LastProjectName}...");
             RhinoApp.WriteLine("💡 You can continue working - upload happens in background");
             
             System.Threading.Tasks.Task.Run(async () =>
@@ -65,7 +69,7 @@ namespace VesselStudioSimplePlugin
                 try
                 {
                     var result = await apiClient.UploadScreenshotAsync(
-                        selectedProject.Id,
+                        settings.LastProjectId,
                         captureData.imageBytes,
                         imageName,
                         captureData.metadata
@@ -137,7 +141,11 @@ namespace VesselStudioSimplePlugin
     /// </summary>
     public class VesselQuickCaptureCommand : Command
     {
+#if DEV
+        public override string EnglishName => "DevVesselQuickCapture";
+#else
         public override string EnglishName => "VesselQuickCapture";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -249,34 +257,25 @@ namespace VesselStudioSimplePlugin
     }
 
     /// <summary>
-    /// Simple WinForms dialog for project selection with async loading
+    /// Simple dialog for entering image name
     /// </summary>
-    internal class CaptureDialog : Form
+    internal class ImageNameDialog : Form
     {
-        private ComboBox projectComboBox;
         private TextBox nameTextBox;
-        private Label statusLabel;
         private Button okButton;
         private Button cancelButton;
-        private readonly VesselStudioApiClient _apiClient;
-        private readonly VesselStudioSettings _settings;
-        private List<VesselProject> _projects;
 
-        public VesselProject SelectedProject { get; private set; }
         public string ImageName { get; private set; }
 
-        public CaptureDialog(VesselStudioApiClient apiClient, VesselStudioSettings settings)
+        public ImageNameDialog()
         {
-            _apiClient = apiClient;
-            _settings = settings;
             InitializeComponent();
-            LoadProjectsAsync();
         }
 
         private void InitializeComponent()
         {
             // Set up form properties
-            Text = "Capture to Vessel Studio";
+            Text = "Capture Screenshot";
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
@@ -289,42 +288,6 @@ namespace VesselStudioSimplePlugin
             const int verticalSpacing = 30;
             const int labelControlSpacing = 8;
             int yPos = 20;
-
-            // Status label (for loading feedback)
-            statusLabel = new Label
-            {
-                Text = "⏳ Loading projects...",
-                Location = new Point(20, yPos),
-                Width = controlWidth,
-                Height = 20,
-                ForeColor = Color.Gray,
-                Font = new Font(Font.FontFamily, 9f, FontStyle.Italic)
-            };
-            Controls.Add(statusLabel);
-            yPos += statusLabel.Height + verticalSpacing;
-
-            // Project label
-            var projectLabel = new Label
-            {
-                Text = "Send to project:",
-                Location = new Point(20, yPos),
-                AutoSize = true
-            };
-            Controls.Add(projectLabel);
-            yPos += projectLabel.Height + labelControlSpacing;
-
-            // Project dropdown
-            projectComboBox = new ComboBox
-            {
-                Location = new Point(20, yPos),
-                Width = controlWidth,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Enabled = false
-            };
-            projectComboBox.DisplayMember = "Name";
-            projectComboBox.ValueMember = "Id";
-            Controls.Add(projectComboBox);
-            yPos += projectComboBox.Height + verticalSpacing;
 
             // Name label
             var nameLabel = new Label
@@ -341,15 +304,13 @@ namespace VesselStudioSimplePlugin
             {
                 Location = new Point(20, yPos),
                 Width = controlWidth,
-                Text = ""
+                Text = $"Capture {DateTime.Now:yyyy-MM-dd HH:mm:ss}"
             };
             nameTextBox.TextChanged += (s, e) =>
             {
-                // Enable capture button only if name is entered and projects loaded
-                okButton.Enabled = !string.IsNullOrWhiteSpace(nameTextBox.Text) && 
-                                  projectComboBox.Enabled && 
-                                  projectComboBox.Items.Count > 0;
+                okButton.Enabled = !string.IsNullOrWhiteSpace(nameTextBox.Text);
             };
+            nameTextBox.SelectAll(); // Select default text for easy replacement
             Controls.Add(nameTextBox);
             yPos += nameTextBox.Height + verticalSpacing + 10;
 
@@ -367,11 +328,11 @@ namespace VesselStudioSimplePlugin
             // OK button (place to left of cancel)
             okButton = new Button
             {
-                Text = "Capture && Upload",
-                Width = 140,
+                Text = "Capture",
+                Width = 100,
                 Height = 32,
                 DialogResult = DialogResult.OK,
-                Enabled = false
+                Enabled = true
             };
             okButton.Location = new Point(cancelButton.Left - okButton.Width - 10, yPos);
             okButton.Click += (s, e) =>
@@ -386,7 +347,6 @@ namespace VesselStudioSimplePlugin
                     return;
                 }
                 
-                SelectedProject = projectComboBox.SelectedItem as VesselProject;
                 ImageName = nameTextBox.Text.Trim();
             };
             Controls.Add(okButton);
@@ -398,57 +358,6 @@ namespace VesselStudioSimplePlugin
             AcceptButton = okButton;
             CancelButton = cancelButton;
         }
-
-        private async void LoadProjectsAsync()
-        {
-            try
-            {
-                _projects = await _apiClient.GetProjectsAsync();
-
-                if (_projects == null || _projects.Count == 0)
-                {
-                    statusLabel.Text = "❌ No projects found. Create a project at vesselstudio.io first.";
-                    statusLabel.ForeColor = Color.Red;
-                    return;
-                }
-
-                // Update UI on UI thread
-                if (InvokeRequired)
-                {
-                    Invoke(new Action(() => PopulateProjects()));
-                }
-                else
-                {
-                    PopulateProjects();
-                }
-            }
-            catch (Exception ex)
-            {
-                statusLabel.Text = $"❌ Error loading projects: {ex.Message}";
-                statusLabel.ForeColor = Color.Red;
-            }
-        }
-
-        private void PopulateProjects()
-        {
-            projectComboBox.DataSource = _projects;
-            projectComboBox.Enabled = true;
-            
-            // Only enable OK button if name is also entered
-            okButton.Enabled = !string.IsNullOrWhiteSpace(nameTextBox.Text);
-
-            // Pre-select last used project
-            if (!string.IsNullOrEmpty(_settings.LastProjectId))
-            {
-                var lastProject = _projects.FirstOrDefault(p => p.Id == _settings.LastProjectId);
-                if (lastProject != null)
-                {
-                    projectComboBox.SelectedItem = lastProject;
-                }
-            }
-
-            statusLabel.Text = $"✅ {_projects.Count} project(s) loaded - Enter image name to continue";
-            statusLabel.ForeColor = Color.Green;
-        }
     }
 }
+

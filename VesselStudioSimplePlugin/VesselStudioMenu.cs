@@ -40,7 +40,11 @@ namespace VesselStudioSimplePlugin
     [System.Runtime.InteropServices.Guid("D8E9F0A1-B2C3-4D5E-6F7A-8B9C0D1E2F3A")]
     public class VesselStudioHelpCommand : Command
     {
+#if DEV
+        public override string EnglishName => "DevVesselStudioHelp";
+#else
         public override string EnglishName => "VesselStudioHelp";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -74,7 +78,11 @@ namespace VesselStudioSimplePlugin
     [System.Runtime.InteropServices.Guid("E9F0A1B2-C3D4-5E6F-7A8B-9C0D1E2F3A4B")]
     public class VesselStudioAboutCommand : Command
     {
+#if DEV
+        public override string EnglishName => "DevVesselStudioAbout";
+#else
         public override string EnglishName => "VesselStudioAbout";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

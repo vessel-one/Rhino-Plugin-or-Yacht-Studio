@@ -94,7 +94,11 @@ namespace VesselStudioSimplePlugin
     [System.Runtime.InteropServices.Guid("B6C7D8E9-F0A1-2B3C-4D5E-6F7A8B9C0D1E")]
     public class VesselStudioShowToolbarCommand : Command
     {
+#if DEV
+        public override string EnglishName => "DevVesselStudioShowToolbar";
+#else
         public override string EnglishName => "VesselStudioShowToolbar";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

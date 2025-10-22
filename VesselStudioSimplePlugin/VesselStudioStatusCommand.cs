@@ -20,7 +20,11 @@ namespace VesselStudioSimplePlugin
         /// <summary>
         /// The command name as it appears on the Rhino command line.
         /// </summary>
+#if DEV
+        public override string EnglishName => "DevVesselStudioStatus";
+#else
         public override string EnglishName => "VesselStudioStatus";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

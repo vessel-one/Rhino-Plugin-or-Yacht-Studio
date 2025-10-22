@@ -18,7 +18,11 @@ namespace VesselStudioSimplePlugin
 
         public static VesselStudioSetApiKeyCommand Instance { get; private set; }
 
+#if DEV
+        public override string EnglishName => "DevVesselSetApiKey";
+#else
         public override string EnglishName => "VesselSetApiKey";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

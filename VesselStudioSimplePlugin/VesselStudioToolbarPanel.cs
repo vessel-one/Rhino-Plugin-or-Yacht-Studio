@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using Rhino;
 using Rhino.Commands;
@@ -10,19 +12,28 @@ namespace VesselStudioSimplePlugin
     /// <summary>
     /// Dockable panel with toolbar buttons for Vessel Studio
     /// </summary>
-    [System.Runtime.InteropServices.Guid("A5B6C7D8-E9F0-4A5B-8C9D-0E1F2A3B4C5D")]
+#if DEV
+    [System.Runtime.InteropServices.Guid("D5E6F7A8-B9C0-1D2E-3F4A-5B6C7D8E9F0A")] // DEV GUID
+#else
+    [System.Runtime.InteropServices.Guid("A5B6C7D8-E9F0-4A5B-8C9D-0E1F2A3B4C5D")] // RELEASE GUID
+#endif
     public class VesselStudioToolbarPanel : Panel
     {
         private Button _captureButton;
         private Button _quickCaptureButton;
         private Button _settingsButton;
+        private Button _refreshProjectsButton;
+        private ComboBox _projectComboBox;
         private Label _statusLabel;
+        private Label _projectLabel;
         private Panel _statusPanel;
+        private List<VesselProject> _projects;
 
         public VesselStudioToolbarPanel()
         {
             InitializeComponents();
             UpdateStatus();
+            LoadProjectsAsync();
         }
 
         private void InitializeComponents()
@@ -72,6 +83,48 @@ namespace VesselStudioSimplePlugin
             this.Controls.Add(_settingsButton);
             yPos += 45; // Button height + padding
 
+            // Project selection section
+            _projectLabel = new Label
+            {
+                Text = "Select Project:",
+                Location = new Point(10, yPos),
+                Size = new Size(200, 20),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+            };
+            this.Controls.Add(_projectLabel);
+            yPos += 25;
+
+            // Project dropdown
+            _projectComboBox = new ComboBox
+            {
+                Location = new Point(10, yPos),
+                Width = 190,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Enabled = false,
+                Font = new Font("Segoe UI", 9)
+            };
+            _projectComboBox.DisplayMember = "Name";
+            _projectComboBox.ValueMember = "Id";
+            _projectComboBox.SelectedIndexChanged += OnProjectChanged;
+            this.Controls.Add(_projectComboBox);
+
+            // Refresh button next to dropdown
+            _refreshProjectsButton = new Button
+            {
+                Text = "🔄",
+                Location = new Point(205, yPos),
+                Size = new Size(65, _projectComboBox.Height),
+                Font = new Font("Segoe UI", 10),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = Color.White
+            };
+            _refreshProjectsButton.FlatAppearance.BorderSize = 0;
+            _refreshProjectsButton.Click += OnRefreshProjectsClick;
+            this.Controls.Add(_refreshProjectsButton);
+            yPos += 45;
+
             // Capture button
             _captureButton = CreateButton("📷 Capture Screenshot", 10, yPos, OnCaptureClick);
             _captureButton.BackColor = Color.FromArgb(76, 175, 80);
@@ -89,7 +142,7 @@ namespace VesselStudioSimplePlugin
             // Help text
             var helpLabel = new Label
             {
-                Text = "Quick Capture saves to\nthe last used project",
+                Text = "Quick Capture auto-names\nand uses selected project",
                 Location = new Point(10, yPos),
                 Size = new Size(260, 35),
                 Font = new Font("Segoe UI", 8),
@@ -154,6 +207,28 @@ namespace VesselStudioSimplePlugin
         {
             RhinoApp.RunScript("VesselSetApiKey", false);
             UpdateStatus();
+            // Reload projects after API key change
+            LoadProjectsAsync();
+        }
+
+        private void OnProjectChanged(object sender, EventArgs e)
+        {
+            // Save selected project to settings
+            if (_projectComboBox.SelectedItem is VesselProject selectedProject)
+            {
+                var settings = VesselStudioSettings.Load();
+                settings.LastProjectId = selectedProject.Id;
+                settings.LastProjectName = selectedProject.Name;
+                settings.Save();
+                
+                RhinoApp.WriteLine($"✓ Project changed to: {selectedProject.Name}");
+                UpdateStatus();
+            }
+        }
+
+        private void OnRefreshProjectsClick(object sender, EventArgs e)
+        {
+            LoadProjectsAsync();
         }
 
         private void OnCaptureClick(object sender, EventArgs e)
@@ -162,6 +237,12 @@ namespace VesselStudioSimplePlugin
             if (string.IsNullOrEmpty(settings?.ApiKey))
             {
                 RhinoApp.WriteLine("❌ Please set your API key first. Run VesselSetApiKey command or use the '⚙ Set API Key' button.");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(settings.LastProjectId))
+            {
+                RhinoApp.WriteLine("❌ Please select a project from the dropdown first.");
                 return;
             }
 
@@ -179,11 +260,83 @@ namespace VesselStudioSimplePlugin
 
             if (string.IsNullOrEmpty(settings.LastProjectId))
             {
-                RhinoApp.WriteLine("❌ Please use 'Capture Screenshot' at least once to select a project.");
+                RhinoApp.WriteLine("❌ Please select a project from the dropdown first.");
                 return;
             }
 
             RhinoApp.RunScript("VesselQuickCapture", false);
+        }
+
+        private async void LoadProjectsAsync()
+        {
+            var settings = VesselStudioSettings.Load();
+            if (string.IsNullOrEmpty(settings?.ApiKey))
+            {
+                _projectComboBox.Enabled = false;
+                _projectComboBox.DataSource = null;
+                _refreshProjectsButton.Enabled = false;
+                return;
+            }
+
+            try
+            {
+                _projectLabel.Text = "⏳ Loading projects...";
+                _projectLabel.ForeColor = Color.Gray;
+                _refreshProjectsButton.Enabled = false;
+                
+                var apiClient = new VesselStudioApiClient();
+                apiClient.SetApiKey(settings.ApiKey);
+                
+                _projects = await apiClient.GetProjectsAsync();
+
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() => PopulateProjects()));
+                }
+                else
+                {
+                    PopulateProjects();
+                }
+            }
+            catch (Exception ex)
+            {
+                _projectLabel.Text = "❌ Error loading projects";
+                _projectLabel.ForeColor = Color.Red;
+                RhinoApp.WriteLine($"Error loading projects: {ex.Message}");
+            }
+            finally
+            {
+                _refreshProjectsButton.Enabled = true;
+            }
+        }
+
+        private void PopulateProjects()
+        {
+            if (_projects == null || _projects.Count == 0)
+            {
+                _projectLabel.Text = "❌ No projects found";
+                _projectLabel.ForeColor = Color.Red;
+                _projectComboBox.Enabled = false;
+                _projectComboBox.DataSource = null;
+                return;
+            }
+
+            _projectComboBox.DataSource = _projects;
+            _projectComboBox.Enabled = true;
+            
+            // Pre-select last used project
+            var settings = VesselStudioSettings.Load();
+            if (!string.IsNullOrEmpty(settings.LastProjectId))
+            {
+                var lastProject = _projects.FirstOrDefault(p => p.Id == settings.LastProjectId);
+                if (lastProject != null)
+                {
+                    _projectComboBox.SelectedItem = lastProject;
+                }
+            }
+
+            _projectLabel.Text = $"✓ {_projects.Count} project(s) loaded";
+            _projectLabel.ForeColor = Color.FromArgb(76, 175, 80);
         }
 
         private void UpdateStatus()
@@ -198,20 +351,24 @@ namespace VesselStudioSimplePlugin
                     _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
                     _captureButton.Enabled = false;
                     _quickCaptureButton.Enabled = false;
+                    _projectComboBox.Enabled = false;
+                    _refreshProjectsButton.Enabled = false;
                 }
                 else if (!string.IsNullOrEmpty(settings.LastProjectName))
                 {
-                    _statusLabel.Text = $"✓ Connected\nLast project: {settings.LastProjectName}";
+                    _statusLabel.Text = $"✓ Connected\nProject: {settings.LastProjectName}";
                     _statusLabel.ForeColor = Color.FromArgb(76, 175, 80);
                     _captureButton.Enabled = true;
                     _quickCaptureButton.Enabled = true;
+                    _refreshProjectsButton.Enabled = true;
                 }
                 else
                 {
-                    _statusLabel.Text = "✓ API key configured\nReady to capture";
+                    _statusLabel.Text = "✓ API key configured\nSelect a project to continue";
                     _statusLabel.ForeColor = Color.FromArgb(70, 130, 180);
-                    _captureButton.Enabled = true;
+                    _captureButton.Enabled = false;
                     _quickCaptureButton.Enabled = false;
+                    _refreshProjectsButton.Enabled = true;
                 }
             }
             catch
@@ -237,6 +394,9 @@ namespace VesselStudioSimplePlugin
                 _captureButton?.Dispose();
                 _quickCaptureButton?.Dispose();
                 _settingsButton?.Dispose();
+                _refreshProjectsButton?.Dispose();
+                _projectComboBox?.Dispose();
+                _projectLabel?.Dispose();
                 _statusLabel?.Dispose();
                 _statusPanel?.Dispose();
             }

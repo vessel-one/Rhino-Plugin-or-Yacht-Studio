@@ -12,7 +12,11 @@ namespace VesselStudioSimplePlugin
     [System.Runtime.InteropServices.Guid("C7D8E9F0-A1B2-3C4D-5E6F-7A8B9C0D1E2F")]
     public class VesselStudioDebugIconsCommand : Command
     {
+#if DEV
+        public override string EnglishName => "DevVesselStudioDebugIcons";
+#else
         public override string EnglishName => "VesselStudioDebugIcons";
+#endif
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

@@ -40,10 +40,17 @@ namespace VesselStudioSimplePlugin
                 VesselStudioMenu.AddMenu();
                 VesselStudioToolbar.AddToolbar();
                 
+#if DEV
+                RhinoApp.WriteLine("=== Vessel Studio Plugin DEV BUILD loaded ===");
+                RhinoApp.WriteLine("• DEV commands: DevVesselSetApiKey, DevVesselCapture, DevVesselQuickCapture");
+                RhinoApp.WriteLine("• DEV toolbar: DevVesselStudioShowToolbar");
+                RhinoApp.WriteLine("• DEV settings: Separate from production");
+#else
                 RhinoApp.WriteLine("Vessel Studio Plugin loaded successfully!");
                 RhinoApp.WriteLine("• Use 'Vessel Studio' menu for all commands");
                 RhinoApp.WriteLine("• Use 'VesselStudioShowToolbar' to show the toolbar panel");
                 RhinoApp.WriteLine("• Or use commands: VesselSetApiKey, VesselCapture, VesselQuickCapture");
+#endif
                 
                 return LoadReturnCode.Success;
             }

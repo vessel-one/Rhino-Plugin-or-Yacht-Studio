@@ -20,7 +20,6 @@ namespace VesselStudioSimplePlugin
     public class VesselStudioToolbarPanel : Panel
     {
         private Button _captureButton;
-        private Button _quickCaptureButton;
         private Button _settingsButton;
         private Button _refreshProjectsButton;
         private ComboBox _projectComboBox;
@@ -135,23 +134,16 @@ namespace VesselStudioSimplePlugin
             yPos += 45;
 
             // Capture button
-            _captureButton = CreateButton("📷 Capture Screenshot", 10, yPos, OnCaptureClick);
+            _captureButton = CreateButton("📷 Capture", 10, yPos, OnCaptureClick);
             _captureButton.BackColor = Color.FromArgb(76, 175, 80);
             _captureButton.ForeColor = Color.White;
             this.Controls.Add(_captureButton);
             yPos += 45; // Button height + padding
 
-            // Quick capture button
-            _quickCaptureButton = CreateButton("⚡ Quick Capture", 10, yPos, OnQuickCaptureClick);
-            _quickCaptureButton.BackColor = Color.FromArgb(255, 152, 0);
-            _quickCaptureButton.ForeColor = Color.White;
-            this.Controls.Add(_quickCaptureButton);
-            yPos += 45; // Button height + padding
-
             // Help text
             var helpLabel = new Label
             {
-                Text = "Quick Capture auto-names\nand uses selected project",
+                Text = "Select project, then capture.\nUploads happen in background.",
                 Location = new Point(10, yPos),
                 Size = new Size(260, 35),
                 Font = new Font("Segoe UI", 8),
@@ -198,6 +190,7 @@ namespace VesselStudioSimplePlugin
 #endif
             };
             this.Controls.Add(aboutLink);
+            yPos += 30; // Link height + bottom padding to ensure visibility
         }
 
         private Button CreateButton(string text, int x, int y, EventHandler onClick)
@@ -274,29 +267,6 @@ namespace VesselStudioSimplePlugin
 #endif
         }
 
-        private void OnQuickCaptureClick(object sender, EventArgs e)
-        {
-            var settings = VesselStudioSettings.Load();
-            if (string.IsNullOrEmpty(settings?.ApiKey))
-            {
-#if DEV
-                RhinoApp.WriteLine("❌ Please set your API key first. Run DevVesselSetApiKey command or use the '⚙ Set API Key' button.");
-#else
-                RhinoApp.WriteLine("❌ Please set your API key first. Run VesselSetApiKey command or use the '⚙ Set API Key' button.");
-#endif
-                return;
-            }
-
-            if (string.IsNullOrEmpty(settings.LastProjectId))
-            {
-                RhinoApp.WriteLine("❌ Please select a project from the dropdown first.");
-                return;
-            }
-
-#if DEV
-            RhinoApp.RunScript("DevVesselQuickCapture", false);
-#else
-            RhinoApp.RunScript("VesselQuickCapture", false);
 #endif
         }
 

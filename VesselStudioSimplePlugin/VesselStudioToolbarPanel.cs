@@ -312,23 +312,35 @@ namespace VesselStudioSimplePlugin
 
         private void PopulateProjects()
         {
+            RhinoApp.WriteLine($"DEBUG: PopulateProjects called. _projects is null: {_projects == null}, Count: {_projects?.Count ?? 0}");
+            
             if (_projects == null || _projects.Count == 0)
             {
                 _projectLabel.Text = "❌ No projects found";
                 _projectLabel.ForeColor = Color.Red;
                 _projectComboBox.Enabled = false;
                 _projectComboBox.DataSource = null;
+                RhinoApp.WriteLine("DEBUG: No projects to populate");
                 return;
             }
 
+            RhinoApp.WriteLine($"DEBUG: About to populate {_projects.Count} projects");
+            
             // Temporarily disable event handler to avoid triggering during population
             _projectComboBox.SelectedIndexChanged -= OnProjectChanged;
             
-            _projectComboBox.DataSource = null; // Clear first
-            _projectComboBox.DataSource = _projects;
+            // Clear completely
+            _projectComboBox.DataSource = null;
+            _projectComboBox.Items.Clear();
+            RhinoApp.WriteLine("DEBUG: ComboBox cleared completely");
+            
+            // IMPORTANT: Set DisplayMember and ValueMember BEFORE DataSource (like working version)
             _projectComboBox.DisplayMember = "Name";
             _projectComboBox.ValueMember = "Id";
+            _projectComboBox.DataSource = _projects;
             _projectComboBox.Enabled = true;
+            
+            RhinoApp.WriteLine($"DEBUG: After binding - DisplayMember={_projectComboBox.DisplayMember}, ValueMember={_projectComboBox.ValueMember}, Items.Count={_projectComboBox.Items.Count}");
             
             // Pre-select last used project
             var settings = VesselStudioSettings.Load();
@@ -338,6 +350,7 @@ namespace VesselStudioSimplePlugin
                 if (lastProject != null)
                 {
                     _projectComboBox.SelectedItem = lastProject;
+                    RhinoApp.WriteLine($"DEBUG: Pre-selected project: {lastProject.Name}");
                 }
             }
 
@@ -346,6 +359,8 @@ namespace VesselStudioSimplePlugin
             
             // Re-enable event handler
             _projectComboBox.SelectedIndexChanged += OnProjectChanged;
+            
+            RhinoApp.WriteLine("DEBUG: PopulateProjects completed successfully");
         }
 
         private void UpdateStatus()

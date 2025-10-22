@@ -336,8 +336,12 @@ namespace VesselStudioSimplePlugin
         {
             try
             {
-                // Use Windows Registry or simple file-based storage for simplicity
+                // Use different environment variable for DEV vs RELEASE
+#if DEV
+                var savedKey = Environment.GetEnvironmentVariable("VESSEL_STUDIO_API_KEY_DEV", EnvironmentVariableTarget.User);
+#else
                 var savedKey = Environment.GetEnvironmentVariable("VESSEL_STUDIO_API_KEY", EnvironmentVariableTarget.User);
+#endif
                 if (!string.IsNullOrEmpty(savedKey))
                 {
                     SetApiKey(savedKey);
@@ -353,8 +357,12 @@ namespace VesselStudioSimplePlugin
         {
             try
             {
-                // Use Windows Registry or simple environment variable for simplicity
+                // Use different environment variable for DEV vs RELEASE
+#if DEV
+                Environment.SetEnvironmentVariable("VESSEL_STUDIO_API_KEY_DEV", apiKey, EnvironmentVariableTarget.User);
+#else
                 Environment.SetEnvironmentVariable("VESSEL_STUDIO_API_KEY", apiKey, EnvironmentVariableTarget.User);
+#endif
             }
             catch
             {

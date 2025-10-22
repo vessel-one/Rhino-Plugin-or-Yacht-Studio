@@ -191,7 +191,11 @@ namespace VesselStudioSimplePlugin
             };
             aboutLink.LinkClicked += (s, e) =>
             {
+#if DEV
+                RhinoApp.RunScript("DevVesselStudioAbout", false);
+#else
                 RhinoApp.RunScript("VesselStudioAbout", false);
+#endif
             };
             this.Controls.Add(aboutLink);
         }
@@ -214,7 +218,11 @@ namespace VesselStudioSimplePlugin
 
         private void OnSettingsClick(object sender, EventArgs e)
         {
+#if DEV
+            RhinoApp.RunScript("DevVesselSetApiKey", false);
+#else
             RhinoApp.RunScript("VesselSetApiKey", false);
+#endif
             UpdateStatus();
             // Reload projects after API key change
             LoadProjectsAsync();
@@ -245,7 +253,11 @@ namespace VesselStudioSimplePlugin
             var settings = VesselStudioSettings.Load();
             if (string.IsNullOrEmpty(settings?.ApiKey))
             {
+#if DEV
+                RhinoApp.WriteLine("❌ Please set your API key first. Run DevVesselSetApiKey command or use the '⚙ Set API Key' button.");
+#else
                 RhinoApp.WriteLine("❌ Please set your API key first. Run VesselSetApiKey command or use the '⚙ Set API Key' button.");
+#endif
                 return;
             }
 
@@ -255,7 +267,11 @@ namespace VesselStudioSimplePlugin
                 return;
             }
 
+#if DEV
+            RhinoApp.RunScript("DevVesselCapture", false);
+#else
             RhinoApp.RunScript("VesselCapture", false);
+#endif
         }
 
         private void OnQuickCaptureClick(object sender, EventArgs e)
@@ -263,7 +279,11 @@ namespace VesselStudioSimplePlugin
             var settings = VesselStudioSettings.Load();
             if (string.IsNullOrEmpty(settings?.ApiKey))
             {
+#if DEV
+                RhinoApp.WriteLine("❌ Please set your API key first. Run DevVesselSetApiKey command or use the '⚙ Set API Key' button.");
+#else
                 RhinoApp.WriteLine("❌ Please set your API key first. Run VesselSetApiKey command or use the '⚙ Set API Key' button.");
+#endif
                 return;
             }
 
@@ -273,7 +293,11 @@ namespace VesselStudioSimplePlugin
                 return;
             }
 
+#if DEV
+            RhinoApp.RunScript("DevVesselQuickCapture", false);
+#else
             RhinoApp.RunScript("VesselQuickCapture", false);
+#endif
         }
 
         private async void LoadProjectsAsync()
@@ -330,7 +354,13 @@ namespace VesselStudioSimplePlugin
                 return;
             }
 
+            // Temporarily disable event handler to avoid triggering during population
+            _projectComboBox.SelectedIndexChanged -= OnProjectChanged;
+            
+            _projectComboBox.DataSource = null; // Clear first
             _projectComboBox.DataSource = _projects;
+            _projectComboBox.DisplayMember = "Name";
+            _projectComboBox.ValueMember = "Id";
             _projectComboBox.Enabled = true;
             
             // Pre-select last used project
@@ -346,6 +376,9 @@ namespace VesselStudioSimplePlugin
 
             _projectLabel.Text = $"✓ {_projects.Count} project(s) loaded";
             _projectLabel.ForeColor = Color.FromArgb(76, 175, 80);
+            
+            // Re-enable event handler
+            _projectComboBox.SelectedIndexChanged += OnProjectChanged;
         }
 
         private void UpdateStatus()

@@ -46,7 +46,15 @@
 
   <!-- Post-build step to create .rhp file from .dll and clean up -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)$(ProjectName).rhp" />
+    <!-- DEV builds get a different filename -->
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+      <RhpFileName>$(ProjectName)-DEV.rhp</RhpFileName>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+      <RhpFileName>$(ProjectName).rhp</RhpFileName>
+    </PropertyGroup>
+    
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)$(RhpFileName)" />
     
     <!-- Remove RhinoCommon and related DLLs that Rhino already provides -->
     <Delete Files="$(TargetDir)RhinoCommon.dll" ContinueOnError="true" />

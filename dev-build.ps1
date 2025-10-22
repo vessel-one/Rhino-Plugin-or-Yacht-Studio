@@ -53,7 +53,7 @@ Write-Host "`n✅ DEV Build successful!" -ForegroundColor Green
 
 # Show output location
 $outputDir = "VesselStudioSimplePlugin\bin\Debug\net48"
-$rhpFile = Join-Path $outputDir "VesselStudioSimplePlugin.rhp"
+$rhpFile = Join-Path $outputDir "VesselStudioSimplePlugin-DEV.rhp"
 
 if (Test-Path $rhpFile) {
     $fileInfo = Get-Item $rhpFile

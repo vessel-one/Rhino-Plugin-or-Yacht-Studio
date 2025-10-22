@@ -42,7 +42,7 @@ if ($Clean) {
 
 # Build
 Write-Host "Building DEV version..." -ForegroundColor Yellow
-$buildResult = dotnet build $projectPath -c $configuration --nologo
+dotnet build $projectPath -c $configuration --nologo
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n❌ Build failed!" -ForegroundColor Red

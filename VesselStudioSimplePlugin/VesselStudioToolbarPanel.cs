@@ -45,10 +45,19 @@ namespace VesselStudioSimplePlugin
             int yPos = 10;
 
             // Title
+#if DEV
+            var titleText = "Vessel Studio DEV";
+            var titleColor = Color.FromArgb(255, 140, 0); // Orange for DEV
+#else
+            var titleText = "Vessel Studio";
+            var titleColor = Color.FromArgb(70, 130, 180); // Blue for production
+#endif
+            
             var titleLabel = new Label
             {
-                Text = "Vessel Studio",
+                Text = titleText,
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = titleColor,
                 AutoSize = true,
                 Location = new Point(10, yPos)
             };

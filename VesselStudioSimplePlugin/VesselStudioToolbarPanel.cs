@@ -267,9 +267,6 @@ namespace VesselStudioSimplePlugin
 #endif
         }
 
-#endif
-        }
-
         private async void LoadProjectsAsync()
         {
             var settings = VesselStudioSettings.Load();
@@ -362,7 +359,6 @@ namespace VesselStudioSimplePlugin
                     _statusLabel.Text = "❌ Not configured\nSet your API key to get started";
                     _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
                     _captureButton.Enabled = false;
-                    _quickCaptureButton.Enabled = false;
                     _projectComboBox.Enabled = false;
                     _refreshProjectsButton.Enabled = false;
                 }
@@ -371,7 +367,6 @@ namespace VesselStudioSimplePlugin
                     _statusLabel.Text = $"✓ Connected\nProject: {settings.LastProjectName}";
                     _statusLabel.ForeColor = Color.FromArgb(76, 175, 80);
                     _captureButton.Enabled = true;
-                    _quickCaptureButton.Enabled = true;
                     _refreshProjectsButton.Enabled = true;
                 }
                 else
@@ -379,7 +374,6 @@ namespace VesselStudioSimplePlugin
                     _statusLabel.Text = "✓ API key configured\nSelect a project to continue";
                     _statusLabel.ForeColor = Color.FromArgb(70, 130, 180);
                     _captureButton.Enabled = false;
-                    _quickCaptureButton.Enabled = false;
                     _refreshProjectsButton.Enabled = true;
                 }
             }
@@ -404,7 +398,6 @@ namespace VesselStudioSimplePlugin
             if (disposing)
             {
                 _captureButton?.Dispose();
-                _quickCaptureButton?.Dispose();
                 _settingsButton?.Dispose();
                 _refreshProjectsButton?.Dispose();
                 _projectComboBox?.Dispose();

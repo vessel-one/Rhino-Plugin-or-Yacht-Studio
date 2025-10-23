@@ -299,18 +299,17 @@ namespace VesselStudioSimplePlugin
             Controls.Add(nameLabel);
             yPos += nameLabel.Height + labelControlSpacing;
 
-            // Name textbox
+            // Name textbox (empty by default - user must enter name)
             nameTextBox = new TextBox
             {
                 Location = new Point(20, yPos),
                 Width = controlWidth,
-                Text = $"Capture {DateTime.Now:yyyy-MM-dd HH:mm:ss}"
+                Text = "" // No default value - user must type their own
             };
             nameTextBox.TextChanged += (s, e) =>
             {
                 okButton.Enabled = !string.IsNullOrWhiteSpace(nameTextBox.Text);
             };
-            nameTextBox.SelectAll(); // Select default text for easy replacement
             Controls.Add(nameTextBox);
             yPos += nameTextBox.Height + verticalSpacing + 10;
 
@@ -325,14 +324,14 @@ namespace VesselStudioSimplePlugin
             cancelButton.Location = new Point(20 + controlWidth - cancelButton.Width, yPos);
             Controls.Add(cancelButton);
 
-            // OK button (place to left of cancel)
+            // OK button (place to left of cancel) - disabled until text is entered
             okButton = new Button
             {
                 Text = "Capture",
                 Width = 100,
                 Height = 32,
                 DialogResult = DialogResult.OK,
-                Enabled = true
+                Enabled = false // Disabled until user enters text
             };
             okButton.Location = new Point(cancelButton.Left - okButton.Width - 10, yPos);
             okButton.Click += (s, e) =>

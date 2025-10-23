@@ -329,18 +329,26 @@ namespace VesselStudioSimplePlugin
             // Temporarily disable event handler to avoid triggering during population
             _projectComboBox.SelectedIndexChanged -= OnProjectChanged;
             
-            // Clear completely
+            // Clear everything
             _projectComboBox.DataSource = null;
+            _projectComboBox.DisplayMember = "";
+            _projectComboBox.ValueMember = "";
             _projectComboBox.Items.Clear();
             RhinoApp.WriteLine("DEBUG: ComboBox cleared completely");
             
-            // IMPORTANT: Set DisplayMember and ValueMember BEFORE DataSource (like working version)
+            // Add items manually instead of using data binding
+            foreach (var project in _projects)
+            {
+                _projectComboBox.Items.Add(project);
+                RhinoApp.WriteLine($"DEBUG: Added project: {project.Name} (ID: {project.Id})");
+            }
+            
+            // NOW set display/value members AFTER items are added
             _projectComboBox.DisplayMember = "Name";
             _projectComboBox.ValueMember = "Id";
-            _projectComboBox.DataSource = _projects;
             _projectComboBox.Enabled = true;
             
-            RhinoApp.WriteLine($"DEBUG: After binding - DisplayMember={_projectComboBox.DisplayMember}, ValueMember={_projectComboBox.ValueMember}, Items.Count={_projectComboBox.Items.Count}");
+            RhinoApp.WriteLine($"DEBUG: After manual population - Items.Count={_projectComboBox.Items.Count}");
             
             // Pre-select last used project
             var settings = VesselStudioSettings.Load();

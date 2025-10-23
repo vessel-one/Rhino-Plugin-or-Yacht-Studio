@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-10-23
+
+### Added
+- **Project Selection Toolbar**: Dockable panel with project dropdown and capture button
+- **Project Persistence**: Plugin remembers last selected project across sessions
+- **Manual Filename Entry**: Users must enter custom name for each capture (no auto-generated names)
+- **DEV/RELEASE Build Modes**: Separate DEV build configuration for testing without conflicts
+- **Project Refresh**: Manual refresh button to reload projects from API
+
+### Changed
+- **Simplified Capture Workflow**: Single capture button (removed Quick Capture from toolbar)
+- **Empty Filename Requirement**: Capture button disabled until user enters a name
+- **Project Selection**: Projects loaded from API and displayed in dropdown instead of dialog
+- **Command Structure**: All commands support DEV prefix for dual-mode installation
+
+### Fixed
+- **Project Dropdown Population**: Fixed ComboBox binding to properly display project names
+- **Settings Isolation**: DEV and RELEASE modes use separate settings folders
+
+## [1.2.0] - 2025-10-23
+
 ### Fixed
 - **Capture Freeze**: Screenshot capture and upload now happens in background - Rhino no longer freezes
 - **Quick Capture Freeze**: Quick capture uploads asynchronously - immediate return to work

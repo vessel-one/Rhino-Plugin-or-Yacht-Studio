@@ -33,41 +33,76 @@ namespace VesselStudioSimplePlugin
             if (_panelIcon != null)
                 return _panelIcon;
 
-            // Load 32x32 icon from embedded resources
-            var bitmap = LoadEmbeddedIcon("icon_32.png");
+            // Try to load 24x24 bitmap for panel tab
+            var bitmap = LoadEmbeddedIcon("icon_24.png");
+            
+            // If embedded resource fails, try to load from file system
             if (bitmap == null)
             {
-                // Fallback to generated icon if resource not found
-                bitmap = CreateFallbackIconBitmap(32);
+                bitmap = LoadIconFromFileSystem("icon_24.png");
+            }
+            
+            if (bitmap == null)
+            {
+                // Fallback to generated icon if both methods fail
+                Rhino.RhinoApp.WriteLine("⚠ Could not load icon_24.png, using fallback icon");
+                bitmap = CreateFallbackIconBitmap(24);
+            }
+            else
+            {
+                Rhino.RhinoApp.WriteLine($"✓ Loaded icon: {bitmap.Width}x{bitmap.Height}");
             }
 
             try
             {
-                // Convert bitmap to icon - must use Bitmap.MakeTransparent() first for proper alpha
-                bitmap.MakeTransparent(bitmap.GetPixel(0, 0));
-                IntPtr hIcon = bitmap.GetHicon();
-                try
+                // Convert bitmap to icon using proper ICO conversion
+                // Create an ICO file in memory with the bitmap
+                using (var ms = new MemoryStream())
                 {
-                    _panelIcon = Icon.FromHandle(hIcon);
-                }
-                finally
-                {
-                    // Clean up the handle to avoid COM errors
-                    DestroyIcon(hIcon);
+                    // Write ICO file header
+                    using (var bw = new BinaryWriter(ms, System.Text.Encoding.UTF8, true))
+                    {
+                        // ICO header (6 bytes)
+                        bw.Write((short)0);      // Reserved (must be 0)
+                        bw.Write((short)1);      // Image type (1 = ICO)
+                        bw.Write((short)1);      // Number of images
+                        
+                        // Image directory (16 bytes)
+                        bw.Write((byte)bitmap.Width);   // Width
+                        bw.Write((byte)bitmap.Height);  // Height
+                        bw.Write((byte)0);       // Color palette
+                        bw.Write((byte)0);       // Reserved
+                        bw.Write((short)1);      // Color planes
+                        bw.Write((short)32);     // Bits per pixel
+                        
+                        // Get PNG data
+                        byte[] pngData;
+                        using (var pngStream = new MemoryStream())
+                        {
+                            bitmap.Save(pngStream, System.Drawing.Imaging.ImageFormat.Png);
+                            pngData = pngStream.ToArray();
+                        }
+                        
+                        bw.Write((int)pngData.Length);  // Image data size
+                        bw.Write((int)22);              // Image data offset (6 + 16)
+                        bw.Write(pngData);              // PNG data
+                    }
+                    
+                    ms.Seek(0, SeekOrigin.Begin);
+                    _panelIcon = new Icon(ms);
+                    
+                    Rhino.RhinoApp.WriteLine($"✓ Icon converted successfully: {_panelIcon.Width}x{_panelIcon.Height}");
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // If icon conversion fails, create a simple icon from bitmap
-                _panelIcon = Icon.FromHandle(bitmap.GetHicon());
+                Rhino.RhinoApp.WriteLine($"❌ Icon conversion failed: {ex.Message}");
+                Rhino.RhinoApp.WriteLine($"   Stack: {ex.StackTrace}");
+                _panelIcon = null;
             }
             
             return _panelIcon;
         }
-        
-        // Import DestroyIcon from user32.dll to properly clean up icon handles
-        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        private static extern bool DestroyIcon(IntPtr handle);
 
         /// <summary>
         /// Get a toolbar button bitmap at specified size
@@ -109,32 +144,57 @@ namespace VesselStudioSimplePlugin
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
+                
+                // The correct pattern based on our build output
                 var resourceName = $"VesselStudioSimplePlugin.Resources.{filename}";
                 
-                var stream = assembly.GetManifestResourceStream(resourceName);
-                if (stream == null)
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
-                    // Try without namespace prefix
-                    resourceName = $"Resources.{filename}";
-                    stream = assembly.GetManifestResourceStream(resourceName);
+                    if (stream != null)
+                    {
+                        return new Bitmap(stream);
+                    }
                 }
                 
-                if (stream == null)
-                    return null;
-                
-                using (stream)
-                {
-                    return new Bitmap(stream);
-                }
+                return null;
             }
-            catch
+            catch (Exception ex)
             {
+                Rhino.RhinoApp.WriteLine($"❌ Error loading embedded icon {filename}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Load an icon from the file system as fallback
+        /// </summary>
+        private static Bitmap LoadIconFromFileSystem(string filename)
+        {
+            try
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var pluginFolder = Path.GetDirectoryName(assembly.Location);
+                var resourcePath = Path.Combine(pluginFolder, "Resources", filename);
+                
+                if (File.Exists(resourcePath))
+                {
+                    Rhino.RhinoApp.WriteLine($"✓ Loaded icon from file system: {resourcePath}");
+                    return new Bitmap(resourcePath);
+                }
+                
+                Rhino.RhinoApp.WriteLine($"⚠ Icon file not found: {resourcePath}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Rhino.RhinoApp.WriteLine($"❌ Error loading icon from file system: {ex.Message}");
                 return null;
             }
         }
 
         /// <summary>
         /// Create a fallback icon bitmap if embedded resource not found
+        /// Creates a visible icon with colored background suitable for both light and dark modes
         /// </summary>
         private static Bitmap CreateFallbackIconBitmap(int size)
         {
@@ -145,29 +205,38 @@ namespace VesselStudioSimplePlugin
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 
-                // Background - Vessel Studio brand blue
-                using (var brush = new SolidBrush(Color.FromArgb(37, 99, 235)))
+                // Background - Vessel Studio brand blue (visible in both light and dark modes)
+                using (var brush = new SolidBrush(Color.FromArgb(64, 123, 255)))
                 {
-                    g.FillRectangle(brush, 0, 0, size, size);
+                    g.FillEllipse(brush, 2, 2, size - 4, size - 4);
                 }
                 
-                // Draw "VS" text in white
-                var fontSize = size * 0.45f;
-                using (var font = new Font("Segoe UI", fontSize, FontStyle.Bold))
-                using (var textBrush = new SolidBrush(Color.White))
+                // Draw ship/vessel icon using simple shapes
+                var centerX = size / 2f;
+                var centerY = size / 2f;
+                var scale = size / 32f;
+                
+                using (var whiteBrush = new SolidBrush(Color.White))
                 {
-                    var format = new StringFormat
+                    // Draw simple boat/vessel shape
+                    // Hull (trapezoid)
+                    PointF[] hull = new PointF[]
                     {
-                        Alignment = StringAlignment.Center,
-                        LineAlignment = StringAlignment.Center
+                        new PointF(centerX - 6 * scale, centerY + 4 * scale),
+                        new PointF(centerX + 6 * scale, centerY + 4 * scale),
+                        new PointF(centerX + 4 * scale, centerY + 2 * scale),
+                        new PointF(centerX - 4 * scale, centerY + 2 * scale)
                     };
-                    g.DrawString("VS", font, textBrush, new RectangleF(0, 0, size, size), format);
-                }
-                
-                // Add subtle border
-                using (var pen = new Pen(Color.FromArgb(25, 70, 180), Math.Max(1, size / 16)))
-                {
-                    g.DrawRectangle(pen, 1, 1, size - 2, size - 2);
+                    g.FillPolygon(whiteBrush, hull);
+                    
+                    // Cabin (rectangle)
+                    g.FillRectangle(whiteBrush, centerX - 3 * scale, centerY - 2 * scale, 6 * scale, 4 * scale);
+                    
+                    // Mast (line)
+                    using (var pen = new Pen(Color.White, Math.Max(1, scale)))
+                    {
+                        g.DrawLine(pen, centerX, centerY - 2 * scale, centerX, centerY - 6 * scale);
+                    }
                 }
             }
 

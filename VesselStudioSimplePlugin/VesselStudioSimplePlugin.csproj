@@ -44,6 +44,13 @@
     <EmbeddedResource Include="Resources\icon_48.png" />
   </ItemGroup>
 
+  <!-- Copy Resources folder to output directory as fallback -->
+  <ItemGroup>
+    <None Include="Resources\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <!-- Post-build step to create .rhp file from .dll and clean up -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <!-- DEV builds get a different filename -->

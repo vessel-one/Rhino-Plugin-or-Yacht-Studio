@@ -9,6 +9,7 @@ using Rhino.Commands;
 using Rhino.UI;
 using VesselStudioSimplePlugin.Models;
 using VesselStudioSimplePlugin.Services;
+using VesselStudioSimplePlugin.UI;
 
 namespace VesselStudioSimplePlugin
 {
@@ -332,106 +333,20 @@ namespace VesselStudioSimplePlugin
         }
 
         /// <summary>
-        /// T055-T058: Handle "Quick Export Batch" button click
-        /// Uploads all queued captures to Vessel Studio as a batch (User Story 3)
+        /// T040: Handle "Quick Export Batch" button click
+        /// Opens the QueueManagerDialog for reviewing and managing queued captures
+        /// (Phase 4 implementation: Dialog management, Phase 5: Upload functionality)
         /// </summary>
-        private async void OnQuickExportBatchClick(object sender, EventArgs e)
+        private void OnQuickExportBatchClick(object sender, EventArgs e)
         {
-            // T056: Get project ID from dropdown
-            if (!(_projectComboBox.SelectedItem is VesselProject selectedProject))
+            // T040: Open Queue Manager Dialog
+            using (var dialog = new QueueManagerDialog())
             {
-                MessageBox.Show("Please select a project first.", "No Project Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                dialog.ShowDialog();
             }
-
-            var settings = VesselStudioSettings.Load();
-            if (string.IsNullOrEmpty(settings?.ApiKey))
-            {
-                MessageBox.Show("API key not configured. Please set your API key first.", "Not Configured", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // Disable button during upload
-            _quickExportBatchButton.Enabled = false;
-            RhinoApp.WriteLine($"[QuickExportBatch] Starting batch upload to project: {selectedProject.Name}");
-
-            try
-            {
-                // T055: Create BatchUploadService with API client
-                var apiClient = new VesselStudioApiClient();
-                apiClient.SetApiKey(settings.ApiKey);
-                var uploadService = new BatchUploadService(apiClient);
-
-                // Create progress reporter
-                var progress = new Progress<BatchUploadProgress>(p =>
-                {
-                    RhinoApp.WriteLine(
-                        $"[QuickExportBatch] Progress: {p.CompletedItems}/{p.TotalItems} completed - {p.PercentComplete}%");
-                });
-
-                // T055: Call UploadBatchAsync
-                var result = await uploadService.UploadBatchAsync(selectedProject.Id, progress);
-
-                // T057-T058: Show success or failure message
-                if (result.Success)
-                {
-                    // T057: Complete success
-                    MessageBox.Show(
-                        $"✅ Batch upload complete!\n\n" +
-                        $"Successfully uploaded {result.UploadedCount} capture{(result.UploadedCount == 1 ? "" : "s")}.\n" +
-                        $"Duration: {result.TotalDurationMs}ms",
-                        "Upload Successful",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    RhinoApp.WriteLine($"[QuickExportBatch] ✅ Upload successful: {result.UploadedCount} items uploaded");
-                }
-                else if (result.IsPartialSuccess)
-                {
-                    // T058: Partial success - preserve queue for retry (FR-008)
-                    var errorMsg = string.Join("\n", result.Errors.Take(3).Select(err => $"• {err.filename}: {err.error}"));
-                    if (result.Errors.Count > 3)
-                        errorMsg += $"\n... and {result.Errors.Count - 3} more errors";
-
-                    MessageBox.Show(
-                        $"⚠ Batch upload incomplete\n\n" +
-                        $"Successful: {result.UploadedCount}\n" +
-                        $"Failed: {result.FailedCount}\n\n" +
-                        $"Errors:\n{errorMsg}\n\n" +
-                        $"Queue preserved for retry.",
-                        "Partial Upload",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    RhinoApp.WriteLine(
-                        $"[QuickExportBatch] ⚠ Partial upload: {result.UploadedCount} successful, {result.FailedCount} failed");
-                }
-                else
-                {
-                    // T058: Complete failure - preserve queue (FR-008)
-                    var errorMsg = string.Join("\n", result.Errors.Take(3).Select(err => $"• {err.filename}: {err.error}"));
-                    MessageBox.Show(
-                        $"❌ Batch upload failed\n\n" +
-                        $"Errors:\n{errorMsg}\n\n" +
-                        $"Queue preserved. Please check your connection and try again.",
-                        "Upload Failed",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                    RhinoApp.WriteLine($"[QuickExportBatch] ❌ Upload failed: {result.FailedCount} items failed");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"❌ An unexpected error occurred:\n\n{ex.Message}",
-                    "Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                RhinoApp.WriteLine($"[QuickExportBatch] ❌ Exception: {ex.Message}");
-            }
-            finally
-            {
-                // Re-enable button
-                UpdateBatchBadge();  // Will re-enable if queue still has items
-            }
+            
+            // Refresh UI after dialog closes
+            UpdateBatchBadge();
         }
 
         /// <summary>

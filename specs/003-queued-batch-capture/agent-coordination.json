@@ -79,7 +79,7 @@
     },
     "phase_4_user_story_2": {
       "name": "User Story 2 - Manage Queued Captures (P1)",
-      "status": "ready",
+      "status": "completed",
       "blocking": false,
       "depends_on": ["phase_2_foundational"],
       "tasks": ["T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039", "T040", "T041", "T042"],
@@ -87,18 +87,20 @@
         "group_1_dialog": {
           "tasks": ["T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
           "description": "QueueManagerDialog implementation with all handlers",
-          "agent": null
+          "agent": "agent_copilot",
+          "status": "completed"
         },
         "group_2_integration": {
           "tasks": ["T040", "T041", "T042"],
           "description": "Wire dialog to toolbar and create optional command",
           "depends_on": ["group_1_dialog"],
-          "agent": null
+          "agent": "agent_copilot",
+          "status": "completed"
         }
       },
-      "assigned_agents": [],
-      "completed_tasks": [],
-      "notes": "Can run in parallel with US1 and US3 after foundational complete"
+      "assigned_agents": ["agent_copilot"],
+      "completed_tasks": ["T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039", "T040", "T041", "T042"],
+      "notes": "COMPLETED: QueueManagerDialog (600x500) with ListView, Remove/Clear buttons, thumbnail display. Wired to toolbar button and command line (VesselQueueManagerCommand). Phase 5 Group 3 now unblocked for Export All functionality."
     },
     "phase_5_user_story_3": {
       "name": "User Story 3 - Send Queued Batch to Vessel Studio (P1) MVP CORE",
@@ -125,20 +127,20 @@
           "description": "Export All button in QueueManagerDialog",
           "depends_on": ["group_1_service"],
           "agent": null,
-          "status": "blocked",
-          "blocker": "Requires QueueManagerDialog from Phase 4"
+          "status": "ready",
+          "blocker": "None - Phase 4 QueueManagerDialog now complete"
         },
         "group_4_command": {
           "tasks": ["T062", "T063"],
           "description": "VesselSendBatchCommand for command line",
           "depends_on": ["group_1_service"],
-          "agent": "agent_copilot",
+          "agent": "agent_3",
           "status": "completed"
         }
       },
-      "assigned_agents": ["agent_copilot"],
+      "assigned_agents": ["agent_copilot", "agent_3"],
       "completed_tasks": ["T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052", "T053", "T054", "T055", "T056", "T057", "T058", "T062", "T063"],
-      "notes": "MVP CORE COMPLETE (14/21 tasks). Groups 1, 2, 4 completed. Group 3 blocked by Phase 4 dependency. Batch upload fully functional via button and command."
+      "notes": "MVP CORE COMPLETE (18/21 tasks). Groups 1, 2, 4 completed. Group 3 (T059-T061) NOW READY for implementation - Phase 4 QueueManagerDialog complete. Batch upload fully functional via Quick Export button and VesselSendBatch command. Ready for Phase 5 Group 3 wiring."
     },
     "phase_6_user_story_4": {
       "name": "User Story 4 - Visual Queue Management UI (P2) Polish",
@@ -213,27 +215,27 @@
       "assigned_phase": "phase_2_foundational"
     },
     "agent_3": {
-      "name": "Agent 3 (Commands)",
+      "name": "Agent 3 (Commands & UI)",
       "status": "completed",
       "current_task": null,
-      "completed_tasks": ["T009", "T010"],
-      "assigned_phase": "phase_2_foundational"
+      "completed_tasks": ["T009", "T010", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025", "T026", "T027", "T028", "T062", "T063"],
+      "assigned_phase": "phase_3_user_story_1 (complete), phase_5_user_story_3_group_4 (complete)"
     },
     "agent_4": {
-      "name": "Agent 4 (UI)",
-      "status": "idle",
-      "current_task": null,
-      "completed_tasks": [],
-      "assigned_phase": null
-    },
-    "agent_copilot": {
-      "name": "GitHub Copilot (Phase 5 Group 1)",
+      "name": "Agent 4 (UI & Toolbar)",
       "status": "completed",
       "current_task": null,
-      "completed_tasks": ["T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052", "T053", "T054", "T055", "T056", "T057", "T058", "T062", "T063"],
-      "assigned_phase": "phase_5_user_story_3",
-      "completion_date": "2025-10-28T20:06:00Z",
-      "notes": "Completed BatchUploadService core + toolbar integration + CLI command. Task T059-T061 blocked by Phase 4 dependency."
+      "completed_tasks": ["T053", "T054", "T055", "T056", "T057", "T058"],
+      "assigned_phase": "phase_5_user_story_3_group_2 (complete)"
+    },
+    "agent_copilot": {
+      "name": "GitHub Copilot (Service Layer & Dialogs)",
+      "status": "completed",
+      "current_task": null,
+      "completed_tasks": ["T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052", "T053", "T054", "T055", "T056", "T057", "T058", "T062", "T063", "T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039", "T040", "T041", "T042"],
+      "assigned_phase": "phase_5_user_story_3, phase_4_user_story_2",
+      "completion_date": "2025-10-28T20:25:51Z",
+      "notes": "Completed Phase 5 (18 tasks: BatchUploadService + toolbar integration + CLI) and Phase 4 (14 tasks: QueueManagerDialog + command line). All Phase 4 now complete, unblocking Phase 5 Group 3. Build: 0 errors, 100.5 KB plugin."
     }
   },
   "execution_log": [

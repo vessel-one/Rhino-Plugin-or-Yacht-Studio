@@ -33,31 +33,72 @@ namespace VesselStudioSimplePlugin
             if (_panelIcon != null)
                 return _panelIcon;
 
-            // Load 24x24 bitmap for panel tab (Rhino uses smaller icons in tabs)
+            // Try to load 24x24 bitmap for panel tab
             var bitmap = LoadEmbeddedIcon("icon_24.png");
+            
+            // If embedded resource fails, try to load from file system
             if (bitmap == null)
             {
-                // Fallback to generated icon if resource not found
+                bitmap = LoadIconFromFileSystem("icon_24.png");
+            }
+            
+            if (bitmap == null)
+            {
+                // Fallback to generated icon if both methods fail
+                Rhino.RhinoApp.WriteLine("⚠ Could not load icon_24.png, using fallback icon");
                 bitmap = CreateFallbackIconBitmap(24);
+            }
+            else
+            {
+                Rhino.RhinoApp.WriteLine($"✓ Loaded icon: {bitmap.Width}x{bitmap.Height}");
             }
 
             try
             {
-                // Convert bitmap to icon - simpler approach without MakeTransparent
-                IntPtr hIcon = bitmap.GetHicon();
-                _panelIcon = Icon.FromHandle(hIcon);
-                // Note: Don't call DestroyIcon here as Icon.FromHandle creates a clone
+                // Convert bitmap to icon using proper ICO conversion
+                // Create an ICO file in memory with the bitmap
+                using (var ms = new MemoryStream())
+                {
+                    // Write ICO file header
+                    using (var bw = new BinaryWriter(ms, System.Text.Encoding.UTF8, true))
+                    {
+                        // ICO header (6 bytes)
+                        bw.Write((short)0);      // Reserved (must be 0)
+                        bw.Write((short)1);      // Image type (1 = ICO)
+                        bw.Write((short)1);      // Number of images
+                        
+                        // Image directory (16 bytes)
+                        bw.Write((byte)bitmap.Width);   // Width
+                        bw.Write((byte)bitmap.Height);  // Height
+                        bw.Write((byte)0);       // Color palette
+                        bw.Write((byte)0);       // Reserved
+                        bw.Write((short)1);      // Color planes
+                        bw.Write((short)32);     // Bits per pixel
+                        
+                        // Get PNG data
+                        byte[] pngData;
+                        using (var pngStream = new MemoryStream())
+                        {
+                            bitmap.Save(pngStream, System.Drawing.Imaging.ImageFormat.Png);
+                            pngData = pngStream.ToArray();
+                        }
+                        
+                        bw.Write((int)pngData.Length);  // Image data size
+                        bw.Write((int)22);              // Image data offset (6 + 16)
+                        bw.Write(pngData);              // PNG data
+                    }
+                    
+                    ms.Seek(0, SeekOrigin.Begin);
+                    _panelIcon = new Icon(ms);
+                    
+                    Rhino.RhinoApp.WriteLine($"✓ Icon converted successfully: {_panelIcon.Width}x{_panelIcon.Height}");
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Icon conversion failed: {ex.Message}");
-                // Last resort: try to create icon from bitmap directly
-                using (var ms = new MemoryStream())
-                {
-                    bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                    ms.Seek(0, SeekOrigin.Begin);
-                    _panelIcon = new Icon(ms, 24, 24);
-                }
+                Rhino.RhinoApp.WriteLine($"❌ Icon conversion failed: {ex.Message}");
+                Rhino.RhinoApp.WriteLine($"   Stack: {ex.StackTrace}");
+                _panelIcon = null;
             }
             
             return _panelIcon;
@@ -103,26 +144,50 @@ namespace VesselStudioSimplePlugin
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
+                
+                // The correct pattern based on our build output
                 var resourceName = $"VesselStudioSimplePlugin.Resources.{filename}";
                 
-                var stream = assembly.GetManifestResourceStream(resourceName);
-                if (stream == null)
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
-                    // Try without namespace prefix
-                    resourceName = $"Resources.{filename}";
-                    stream = assembly.GetManifestResourceStream(resourceName);
+                    if (stream != null)
+                    {
+                        return new Bitmap(stream);
+                    }
                 }
                 
-                if (stream == null)
-                    return null;
-                
-                using (stream)
-                {
-                    return new Bitmap(stream);
-                }
+                return null;
             }
-            catch
+            catch (Exception ex)
             {
+                Rhino.RhinoApp.WriteLine($"❌ Error loading embedded icon {filename}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Load an icon from the file system as fallback
+        /// </summary>
+        private static Bitmap LoadIconFromFileSystem(string filename)
+        {
+            try
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var pluginFolder = Path.GetDirectoryName(assembly.Location);
+                var resourcePath = Path.Combine(pluginFolder, "Resources", filename);
+                
+                if (File.Exists(resourcePath))
+                {
+                    Rhino.RhinoApp.WriteLine($"✓ Loaded icon from file system: {resourcePath}");
+                    return new Bitmap(resourcePath);
+                }
+                
+                Rhino.RhinoApp.WriteLine($"⚠ Icon file not found: {resourcePath}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Rhino.RhinoApp.WriteLine($"❌ Error loading icon from file system: {ex.Message}");
                 return null;
             }
         }

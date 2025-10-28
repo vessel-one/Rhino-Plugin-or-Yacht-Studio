@@ -189,8 +189,8 @@ namespace VesselStudioSimplePlugin
 
             _refreshProjectsButton = new Button
             {
-                Text = "🔄",
-                Size = new Size(50, 23),
+                Text = "Reload",
+                Size = new Size(60, 23),
                 FlatStyle = FlatStyle.Standard,
                 Margin = new Padding(5, 0, 0, 0),
                 Cursor = Cursors.Hand

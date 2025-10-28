@@ -324,6 +324,7 @@ namespace VesselStudioSimplePlugin
         private void OnSettingsClick(object sender, EventArgs e)
         {
             // Open combined settings dialog
+            RhinoApp.WriteLine("🔧 Opening Settings dialog...");
 #if DEV
             RhinoApp.RunScript("DevVesselSettings", false);
 #else

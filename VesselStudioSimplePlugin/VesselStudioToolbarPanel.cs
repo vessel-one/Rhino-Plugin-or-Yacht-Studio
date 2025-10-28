@@ -190,7 +190,7 @@ namespace VesselStudioSimplePlugin
             _refreshProjectsButton = new Button
             {
                 Text = "Reload",
-                Size = new Size(60, 23),
+                Size = new Size(80, 23),
                 FlatStyle = FlatStyle.Standard,
                 Margin = new Padding(5, 0, 0, 0),
                 Cursor = Cursors.Hand
@@ -323,16 +323,17 @@ namespace VesselStudioSimplePlugin
 
         private void OnSettingsClick(object sender, EventArgs e)
         {
-            // Open combined settings dialog
-            RhinoApp.WriteLine("🔧 Opening Settings dialog...");
-#if DEV
-            RhinoApp.RunScript("DevVesselSettings", false);
-#else
-            RhinoApp.RunScript("VesselSettings", false);
-#endif
-            UpdateStatus();
-            // Reload projects after settings change
-            LoadProjectsAsync();
+            // Open combined settings dialog directly (same as Batch Manager)
+            using (var dialog = new VesselStudioSettingsDialog())
+            {
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    RhinoApp.WriteLine("✅ Settings saved successfully");
+                    UpdateStatus();
+                    // Reload projects after settings change
+                    LoadProjectsAsync();
+                }
+            }
         }
 
         private void OnProjectChanged(object sender, EventArgs e)

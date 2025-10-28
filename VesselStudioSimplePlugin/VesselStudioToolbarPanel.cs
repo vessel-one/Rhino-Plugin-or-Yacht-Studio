@@ -151,7 +151,7 @@ namespace VesselStudioSimplePlugin
             var infoCard = new CardPanel
             {
                 Location = new Point(15, yPos),
-                Size = new Size(250, 65),
+                Size = new Size(250, 75),
                 BackColor = Color.FromArgb(240, 248, 255)
             };
 
@@ -159,13 +159,13 @@ namespace VesselStudioSimplePlugin
             {
                 Text = "💡 Quick Tip\nUploads happen in background.\nYou can continue working!",
                 Location = new Point(12, 10),
-                Size = new Size(226, 45),
+                Size = new Size(226, 60),
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = Color.FromArgb(80, 80, 80)
             };
             infoCard.Controls.Add(helpLabel);
             this.Controls.Add(infoCard);
-            yPos += 80;
+            yPos += 90;
 
             // Modern link buttons
             var docLink = new ModernLinkLabel("📖 Documentation", primaryColor)
@@ -557,8 +557,8 @@ namespace VesselStudioSimplePlugin
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.SmoothingMode = SmoothingMode.None; // Disable anti-aliasing to avoid transparency artifacts
+            g.PixelOffsetMode = PixelOffsetMode.Half;
 
             // Calculate current color based on animation progress
             Color currentColor;
@@ -581,27 +581,25 @@ namespace VesselStudioSimplePlugin
                 currentColor = Color.FromArgb(180, 180, 180);
             }
 
-            // Draw rounded rectangle background
-            int cornerRadius = IsIconButton ? 8 : 10;
-            using (var path = GetRoundedRectPath(ClientRectangle, cornerRadius))
+            // Clear background first with solid color
+            using (var bgBrush = new SolidBrush(this.Parent.BackColor))
             {
-                // Shadow effect
-                if (this.Enabled && _animationProgress > 0)
-                {
-                    var shadowRect = ClientRectangle;
-                    shadowRect.Inflate(1, 1);
-                    shadowRect.Offset(0, 2);
-                    using (var shadowPath = GetRoundedRectPath(shadowRect, cornerRadius))
-                    using (var shadowBrush = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
-                    {
-                        g.FillPath(shadowBrush, shadowPath);
-                    }
-                }
+                g.FillRectangle(bgBrush, ClientRectangle);
+            }
 
-                // Button background
-                using (var brush = new SolidBrush(currentColor))
+            // Use flat style without rounded corners - cleaner rendering
+            using (var brush = new SolidBrush(currentColor))
+            {
+                g.FillRectangle(brush, ClientRectangle);
+            }
+
+            // Draw subtle border for depth
+            if (this.Enabled)
+            {
+                var borderColor = _isPressing ? DarkenColor(currentColor, 30) : DarkenColor(currentColor, 15);
+                using (var borderPen = new Pen(borderColor, 1))
                 {
-                    g.FillPath(brush, path);
+                    g.DrawRectangle(borderPen, 0, 0, ClientRectangle.Width - 1, ClientRectangle.Height - 1);
                 }
             }
 
@@ -609,20 +607,6 @@ namespace VesselStudioSimplePlugin
             var textColor = this.Enabled ? Color.White : Color.FromArgb(150, 150, 150);
             TextRenderer.DrawText(g, this.Text, this.Font, ClientRectangle, textColor,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        }
-
-        private GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
-        {
-            var path = new GraphicsPath();
-            rect.Inflate(-1, -1); // Slight inset for cleaner edges
-            
-            path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
-            path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
-            path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
-            path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
-            path.CloseFigure();
-            
-            return path;
         }
 
         private Color LightenColor(Color color, int amount)
@@ -661,7 +645,7 @@ namespace VesselStudioSimplePlugin
     }
 
     /// <summary>
-    /// Card-style panel with rounded corners and subtle shadow
+    /// Card-style panel with subtle border
     /// </summary>
     public class CardPanel : Panel
     {
@@ -670,43 +654,24 @@ namespace VesselStudioSimplePlugin
             this.SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | 
                          ControlStyles.OptimizedDoubleBuffer, true);
             this.Padding = new Padding(10);
+            this.BorderStyle = BorderStyle.None;
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            // Draw shadow
-            var shadowRect = ClientRectangle;
-            shadowRect.Inflate(1, 1);
-            shadowRect.Offset(0, 2);
-            using (var shadowPath = GetRoundedRectPath(shadowRect, 12))
-            using (var shadowBrush = new SolidBrush(Color.FromArgb(15, 0, 0, 0)))
-            {
-                g.FillPath(shadowBrush, shadowPath);
-            }
-
-            // Draw card background
-            using (var path = GetRoundedRectPath(ClientRectangle, 12))
+            
+            // Draw solid background
             using (var brush = new SolidBrush(this.BackColor))
             {
-                g.FillPath(brush, path);
+                g.FillRectangle(brush, ClientRectangle);
             }
-        }
 
-        private GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
-        {
-            var path = new GraphicsPath();
-            rect.Inflate(-1, -1);
-            
-            path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
-            path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
-            path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
-            path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
-            path.CloseFigure();
-            
-            return path;
+            // Draw border
+            using (var borderPen = new Pen(Color.FromArgb(220, 220, 220), 1))
+            {
+                g.DrawRectangle(borderPen, 0, 0, ClientRectangle.Width - 1, ClientRectangle.Height - 1);
+            }
         }
     }
 

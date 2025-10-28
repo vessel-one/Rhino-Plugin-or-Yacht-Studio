@@ -203,16 +203,46 @@ namespace VesselStudioSimplePlugin
                 
                 var result = await _apiClient.ValidateApiKeyAsync();
 
-                if (result.Success)
+                if (result.Success && result.HasValidSubscription)
                 {
                     WriteOutput("=================================");
                     WriteOutput("✅ SUCCESS: API key validated");
                     WriteOutput($"Connected as: {result.UserName}");
+                    WriteOutput($"Subscription: Active ({result.UserEmail})");
                     WriteOutput("");
                     WriteOutput("You can now save and start capturing!");
                     WriteOutput("=================================");
                     _isValidated = true;
                     _saveButton.Enabled = true;
+                    
+                    // Save subscription status immediately
+                    var settings = VesselStudioSettings.Load();
+                    settings.HasValidSubscription = true;
+                    settings.LastSubscriptionCheck = DateTime.Now;
+                    settings.SubscriptionErrorMessage = null;
+                    settings.UpgradeUrl = null;
+                    settings.Save();
+                }
+                else if (result.Success && !result.HasValidSubscription)
+                {
+                    // API key is valid but subscription is insufficient
+                    WriteOutput("=================================");
+                    WriteOutput("🔒 SUBSCRIPTION REQUIRED");
+                    WriteOutput("");
+                    WriteOutput(result.SubscriptionError?.UserMessage ?? "Upgrade required to use Rhino plugin");
+                    WriteOutput("");
+                    WriteOutput($"Upgrade at: {result.SubscriptionError?.UpgradeUrl ?? "https://vesselstudio.io/settings?tab=billing"}");
+                    WriteOutput("=================================");
+                    _isValidated = true; // Key is valid, allow saving
+                    _saveButton.Enabled = true;
+                    
+                    // Save locked subscription status
+                    var settings = VesselStudioSettings.Load();
+                    settings.HasValidSubscription = false;
+                    settings.LastSubscriptionCheck = DateTime.Now;
+                    settings.SubscriptionErrorMessage = result.SubscriptionError?.UserMessage;
+                    settings.UpgradeUrl = result.SubscriptionError?.UpgradeUrl;
+                    settings.Save();
                 }
                 else
                 {

@@ -40,17 +40,8 @@ namespace VesselStudioSimplePlugin
                 VesselStudioMenu.AddMenu();
                 VesselStudioToolbar.AddToolbar();
                 
-#if DEV
-                RhinoApp.WriteLine("=== Vessel Studio Plugin DEV BUILD loaded ===");
-                RhinoApp.WriteLine("• DEV commands: DevVesselSetApiKey, DevVesselCapture, DevVesselQuickCapture");
-                RhinoApp.WriteLine("• DEV toolbar: DevVesselStudioShowToolbar");
-                RhinoApp.WriteLine("• DEV settings: Separate from production");
-#else
-                RhinoApp.WriteLine("Vessel Studio Plugin loaded successfully!");
-                RhinoApp.WriteLine("• Use 'Vessel Studio' menu for all commands");
-                RhinoApp.WriteLine("• Use 'VesselStudioShowToolbar' to show the toolbar panel");
-                RhinoApp.WriteLine("• Or use commands: VesselSetApiKey, VesselCapture, VesselQuickCapture");
-#endif
+                // Validate subscription on startup (non-blocking)
+                ValidateSubscriptionOnStartup();
                 
                 return LoadReturnCode.Success;
             }
@@ -58,6 +49,82 @@ namespace VesselStudioSimplePlugin
             {
                 errorMessage = $"Failed to load Vessel Studio plugin: {ex.Message}";
                 return LoadReturnCode.ErrorShowDialog;
+            }
+        }
+
+        /// <summary>
+        /// Validate subscription status on plugin startup (non-blocking)
+        /// </summary>
+        private async void ValidateSubscriptionOnStartup()
+        {
+            try
+            {
+                var settings = VesselStudioSettings.Load();
+                
+                // Only validate if we have an API key
+                if (string.IsNullOrEmpty(settings.ApiKey))
+                {
+                    RhinoApp.WriteLine("Vessel Studio loaded");
+                    return;
+                }
+                
+                // Check if we should revalidate (every hour or on first load)
+                if (!settings.ShouldRecheckSubscription() && settings.LastSubscriptionCheck > DateTime.MinValue)
+                {
+                    // Use cached status
+                    var cachedStatus = settings.HasValidSubscription ? "Active" : "LOCKED";
+                    RhinoApp.WriteLine($"Vessel Studio loaded - Subscription: {cachedStatus}");
+                    return;
+                }
+                
+                ApiClient.SetApiKey(settings.ApiKey);
+                var result = await ApiClient.ValidateApiKeyAsync();
+                
+                // If validation completely failed (network error, timeout, user deleted, etc.)
+                if (!result.Success)
+                {
+                    // Clear all cached data - force user to reconfigure
+                    settings.HasValidSubscription = false;
+                    settings.LastSubscriptionCheck = DateTime.MinValue;
+                    settings.LastProjectId = null;
+                    settings.LastProjectName = null;
+                    settings.ApiKey = null;
+                    settings.SubscriptionErrorMessage = result.ErrorMessage;
+                    settings.Save();
+                    
+                    RhinoApp.WriteLine($"Vessel Studio loaded - Authentication failed: {result.ErrorMessage}");
+                    RhinoApp.WriteLine("Please reconfigure your API key in the settings.");
+                    return;
+                }
+                
+                // Update cached subscription status
+                settings.HasValidSubscription = result.HasValidSubscription;
+                settings.LastSubscriptionCheck = DateTime.Now;
+                settings.SubscriptionErrorMessage = result.SubscriptionError?.UserMessage;
+                settings.UpgradeUrl = result.SubscriptionError?.UpgradeUrl;
+                
+                // If subscription is invalid, clear project cache
+                if (!result.HasValidSubscription)
+                {
+                    settings.LastProjectId = null;
+                    settings.LastProjectName = null;
+                }
+                
+                settings.Save();
+                
+                if (!result.HasValidSubscription)
+                {
+                    RhinoApp.WriteLine("Vessel Studio loaded - Subscription: LOCKED (upgrade required)");
+                }
+                else
+                {
+                    RhinoApp.WriteLine("Vessel Studio loaded - Subscription: Active");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Silently fail - don't block plugin load
+                RhinoApp.WriteLine($"Vessel Studio loaded - Could not validate subscription: {ex.Message}");
             }
         }
 

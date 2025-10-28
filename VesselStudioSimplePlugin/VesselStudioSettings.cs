@@ -13,6 +13,20 @@ namespace VesselStudioSimplePlugin
         public string ApiKey { get; set; }
         public string LastProjectId { get; set; }
         public string LastProjectName { get; set; }
+        
+        // Subscription status caching
+        public bool HasValidSubscription { get; set; } = true; // Default to true for backwards compatibility
+        public DateTime LastSubscriptionCheck { get; set; }
+        public string SubscriptionErrorMessage { get; set; }
+        public string UpgradeUrl { get; set; }
+
+        /// <summary>
+        /// Check if subscription should be revalidated (every hour)
+        /// </summary>
+        public bool ShouldRecheckSubscription()
+        {
+            return (DateTime.Now - LastSubscriptionCheck).TotalHours > 1;
+        }
 
         private static string SettingsPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

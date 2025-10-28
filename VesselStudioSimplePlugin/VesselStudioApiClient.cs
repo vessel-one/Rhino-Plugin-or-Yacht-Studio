@@ -24,6 +24,22 @@ namespace VesselStudioSimplePlugin
     }
 
     /// <summary>
+    /// API error response for subscription issues
+    /// </summary>
+    public class ApiErrorResponse
+    {
+        public bool Success { get; set; }
+        public string Error { get; set; }
+        public string Message { get; set; }
+        public string Details { get; set; }
+        public string UserMessage { get; set; }
+        public bool RequiresUpgrade { get; set; }
+        public string CurrentPlan { get; set; }
+        public string[] RequiredPlans { get; set; }
+        public string UpgradeUrl { get; set; }
+    }
+
+    /// <summary>
     /// API client for Vessel One integration
     /// </summary>
     public class VesselStudioApiClient : IDisposable
@@ -90,10 +106,43 @@ namespace VesselStudioSimplePlugin
                     RhinoApp.WriteLine($"Response body: {json}");
                     
                     var result = JsonConvert.DeserializeObject<dynamic>(json);
+                    
+                    // Check subscription tier
+                    var subscriptionTier = result.user?.subscriptionTier?.ToString()?.ToLower();
+                    var allowedTiers = new[] { "standard", "pro", "educational" };
+                    var hasValidSubscription = !string.IsNullOrEmpty(subscriptionTier) && 
+                                               Array.Exists(allowedTiers, tier => tier == subscriptionTier);
+                    
+                    if (!hasValidSubscription)
+                    {
+                        // API key valid but subscription tier insufficient
+                        return new ValidationResult
+                        {
+                            Success = true, // API key is valid
+                            HasValidSubscription = false, // But subscription is insufficient
+                            UserName = result.user?.displayName?.ToString(),
+                            UserEmail = result.user?.email?.ToString(),
+                            ErrorMessage = "Subscription upgrade required",
+                            ErrorDetails = $"Your current plan ({subscriptionTier}) does not include Rhino plugin access. Please upgrade to Standard, Pro, or Educational plan.",
+                            SubscriptionError = new ApiErrorResponse
+                            {
+                                Success = false,
+                                Error = "SUBSCRIPTION_INSUFFICIENT",
+                                UserMessage = $"Your {subscriptionTier?.ToUpper()} plan does not include Rhino plugin access.\n\nUpgrade to Standard, Pro, or Educational to use this plugin.",
+                                CurrentPlan = subscriptionTier,
+                                RequiredPlans = new[] { "Standard", "Pro", "Educational" },
+                                UpgradeUrl = "https://vesselstudio.io/settings?tab=billing"
+                            }
+                        };
+                    }
+                    
+                    // Valid subscription
                     return new ValidationResult
                     {
                         Success = true,
-                        UserName = result.userName?.ToString(),
+                        HasValidSubscription = true,
+                        UserName = result.user?.displayName?.ToString(),
+                        UserEmail = result.user?.email?.ToString(),
                         ErrorMessage = null,
                         ErrorDetails = null
                     };
@@ -393,7 +442,12 @@ namespace VesselStudioSimplePlugin
     {
         public bool Success { get; set; }
         public string UserName { get; set; }
+        public string UserEmail { get; set; }
         public string ErrorMessage { get; set; }
         public string ErrorDetails { get; set; }
+        
+        // Subscription validation
+        public bool HasValidSubscription { get; set; }
+        public ApiErrorResponse SubscriptionError { get; set; }
     }
 }

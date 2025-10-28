@@ -289,6 +289,43 @@ namespace VesselStudioSimplePlugin
                 
                 _projects = await apiClient.GetProjectsAsync();
 
+                // If we got 0 projects, could mean authentication failed or user deleted
+                if (_projects == null || _projects.Count == 0)
+                {
+                    // Validate API key to check if it's still valid
+                    var validation = await apiClient.ValidateApiKeyAsync();
+                    
+                    if (!validation.Success)
+                    {
+                        // Authentication failed - clear settings
+                        settings.ApiKey = null;
+                        settings.LastProjectId = null;
+                        settings.LastProjectName = null;
+                        settings.HasValidSubscription = false;
+                        settings.Save();
+                        
+                        RhinoApp.WriteLine($"❌ Authentication failed: {validation.ErrorMessage}");
+                        RhinoApp.WriteLine("Please reconfigure your API key in the settings.");
+                        
+                        // Update UI to disconnected state
+                        if (InvokeRequired)
+                        {
+                            Invoke(new Action(() => {
+                                _projectComboBox.DataSource = null;
+                                _projectComboBox.Enabled = false;
+                                UpdateStatus();
+                            }));
+                        }
+                        else
+                        {
+                            _projectComboBox.DataSource = null;
+                            _projectComboBox.Enabled = false;
+                            UpdateStatus();
+                        }
+                        return;
+                    }
+                }
+
                 if (InvokeRequired)
                 {
                     Invoke(new Action(() => PopulateProjects()));
@@ -380,6 +417,15 @@ namespace VesselStudioSimplePlugin
                 if (string.IsNullOrEmpty(settings?.ApiKey))
                 {
                     _statusLabel.Text = "❌ Not configured\nSet your API key to get started";
+                    _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
+                    _captureButton.Enabled = false;
+                    _projectComboBox.Enabled = false;
+                    _refreshProjectsButton.Enabled = false;
+                }
+                else if (!settings.HasValidSubscription)
+                {
+                    // API key exists but subscription is invalid or auth failed
+                    _statusLabel.Text = "❌ Authentication failed\nReconfigure your API key";
                     _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
                     _captureButton.Enabled = false;
                     _projectComboBox.Enabled = false;

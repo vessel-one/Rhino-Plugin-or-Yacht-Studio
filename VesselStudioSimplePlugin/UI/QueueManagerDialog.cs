@@ -72,22 +72,24 @@ namespace VesselStudioSimplePlugin.UI
             _queueListView.Columns.Add("Timestamp", 150);
             this.Controls.Add(_queueListView);
 
-            // T031: Bottom panel for buttons
+            // T031: Bottom panel for buttons with increased height for progress bar
             var buttonPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 80,
-                BackColor = SystemColors.Control
+                Height = 120,  // Increased from 80 to accommodate progress bar + buttons
+                BackColor = SystemColors.Control,
+                Padding = new Padding(10)  // Add padding around all edges
             };
             this.Controls.Add(buttonPanel);
 
             // Add progress bar (hidden by default, shown during export)
             _uploadProgressBar = new ProgressBar
             {
-                Size = new Size(580, 20),
+                Size = new Size(560, 20),  // Slightly narrower to account for panel padding
                 Location = new Point(10, 10),
                 Visible = false,
-                Style = ProgressBarStyle.Continuous
+                Style = ProgressBarStyle.Continuous,
+                Margin = new Padding(5)
             };
             buttonPanel.Controls.Add(_uploadProgressBar);
 
@@ -99,16 +101,18 @@ namespace VesselStudioSimplePlugin.UI
                 Location = new Point(10, 35),
                 Visible = false,
                 Font = new Font("Arial", 9, FontStyle.Regular),
-                ForeColor = SystemColors.ControlText
+                ForeColor = SystemColors.ControlText,
+                Margin = new Padding(5)
             };
             buttonPanel.Controls.Add(_progressStatusLabel);
 
-            // T031: Remove Selected button
+            // T031: Remove Selected button - positioned below progress area
             _removeSelectedButton = new Button
             {
                 Text = "Remove Selected",
                 Size = new Size(120, 30),
-                Location = new Point(10, 40)
+                Location = new Point(10, 70),  // Changed from 40 to 70
+                Margin = new Padding(5)
             };
             _removeSelectedButton.Click += OnRemoveSelectedClick;
             buttonPanel.Controls.Add(_removeSelectedButton);
@@ -118,7 +122,8 @@ namespace VesselStudioSimplePlugin.UI
             {
                 Text = "Clear All",
                 Size = new Size(100, 30),
-                Location = new Point(140, 40)
+                Location = new Point(140, 70),  // Changed from 40 to 70
+                Margin = new Padding(5)
             };
             _clearAllButton.Click += OnClearAllClick;
             buttonPanel.Controls.Add(_clearAllButton);
@@ -128,7 +133,8 @@ namespace VesselStudioSimplePlugin.UI
             {
                 Text = "Export All",
                 Size = new Size(100, 30),
-                Location = new Point(250, 40)
+                Location = new Point(250, 70),  // Changed from 40 to 70
+                Margin = new Padding(5)
             };
             _exportAllButton.Click += OnExportAllClick;
             buttonPanel.Controls.Add(_exportAllButton);
@@ -138,7 +144,8 @@ namespace VesselStudioSimplePlugin.UI
             {
                 Text = "📸 Format",
                 Size = new Size(80, 30),
-                Location = new Point(360, 40)
+                Location = new Point(360, 70),  // Changed from 40 to 70
+                Margin = new Padding(5)
             };
             _settingsButton.Click += OnSettingsClick;
             
@@ -156,8 +163,9 @@ namespace VesselStudioSimplePlugin.UI
             {
                 Text = "Close",
                 Size = new Size(80, 30),
-                Location = new Point(450, 40),
-                DialogResult = DialogResult.Cancel
+                Location = new Point(450, 70),  // Changed from 40 to 70
+                DialogResult = DialogResult.Cancel,
+                Margin = new Padding(5)
             };
             this.CancelButton = _closeButton;
             buttonPanel.Controls.Add(_closeButton);

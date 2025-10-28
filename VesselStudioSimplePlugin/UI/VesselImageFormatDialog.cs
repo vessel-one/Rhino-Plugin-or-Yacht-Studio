@@ -31,10 +31,10 @@ namespace VesselStudioSimplePlugin.UI
 
         private void InitializeDialog()
         {
-            // Form properties - larger to accommodate content
+            // Form properties - start with base size, will auto-adjust
             this.Text = "Vessel Studio - Image Settings";
-            this.Width = 480;           // Increased from 400
-            this.Height = 380;          // Increased from 280
+            this.Width = 530;
+            this.Height = 450;          // Start larger for dynamic content
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -42,14 +42,14 @@ namespace VesselStudioSimplePlugin.UI
             this.BackColor = System.Drawing.Color.White;
             this.Padding = new System.Windows.Forms.Padding(15);  // Form padding
 
-            // Image Format Group Box - larger with better spacing
+            // Image Format Group Box - with AutoSize for dynamic expansion
             _imageGroupBox = new GroupBox();
             _imageGroupBox.Text = "Image Format Settings";
             _imageGroupBox.Left = 15;
             _imageGroupBox.Top = 15;
-            _imageGroupBox.Width = 450;         // Increased from 360
-            _imageGroupBox.Height = 240;        // Increased from 180
+            _imageGroupBox.Width = 485;
             _imageGroupBox.Padding = new System.Windows.Forms.Padding(15);  // Internal padding
+            _imageGroupBox.AutoSize = false;  // We'll set explicit height after measuring content
 
             // Format Label
             _formatLabel = new Label();
@@ -58,44 +58,54 @@ namespace VesselStudioSimplePlugin.UI
             _formatLabel.Top = 25;
             _formatLabel.Width = 80;
             _formatLabel.Height = 20;
+            _formatLabel.AutoSize = false;
+            _formatLabel.Margin = new System.Windows.Forms.Padding(5);
             _formatLabel.Font = new System.Drawing.Font("Arial", 9, System.Drawing.FontStyle.Bold);
 
-            // Format ComboBox - larger
+            // Format ComboBox
             _formatCombo = new ComboBox();
             _formatCombo.Left = 110;
             _formatCombo.Top = 25;
-            _formatCombo.Width = 310;          // Increased from 240
+            _formatCombo.Width = 350;
             _formatCombo.Height = 25;
+            _formatCombo.Margin = new System.Windows.Forms.Padding(5);
             _formatCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _formatCombo.Font = new System.Drawing.Font("Arial", 9);
             _formatCombo.Items.AddRange(new[] { "PNG (Recommended - Lossless)", "JPEG (Smaller file size)" });
             _formatCombo.SelectedIndexChanged += FormatCombo_SelectedIndexChanged;
 
-            // Format Description Label - larger with better spacing
+            // Format Description Label - with AutoSize for dynamic height
             _formatDescLabel = new Label();
             _formatDescLabel.Text = "PNG:  Lossless quality, maintains 100% fidelity\n         Larger file size (~2-3 MB)\n\nJPEG:  Compressed with adjustable quality\n         Smaller file size (~500-800 KB)";
             _formatDescLabel.Left = 15;
             _formatDescLabel.Top = 60;
-            _formatDescLabel.Width = 405;      // Increased from 330
-            _formatDescLabel.Height = 75;      // Increased from 40
+            _formatDescLabel.Width = 440;
+            _formatDescLabel.AutoSize = true;  // Auto-expand to fit text
+            _formatDescLabel.Margin = new System.Windows.Forms.Padding(5);
             _formatDescLabel.Font = new System.Drawing.Font("Arial", 8.5f);
             _formatDescLabel.ForeColor = System.Drawing.Color.FromArgb(80, 80, 80);
+
+            // Calculate position for Quality Label based on description label height
+            int qualityLabelTop = _formatDescLabel.Top + _formatDescLabel.Height + 10;
 
             // Quality Label
             _qualityLabel = new Label();
             _qualityLabel.Text = "JPEG Quality:";
             _qualityLabel.Left = 15;
-            _qualityLabel.Top = 150;
-            _qualityLabel.Width = 90;
+            _qualityLabel.Top = qualityLabelTop;
+            _qualityLabel.Width = 110;
             _qualityLabel.Height = 20;
+            _qualityLabel.AutoSize = false;
+            _qualityLabel.Margin = new System.Windows.Forms.Padding(5);
             _qualityLabel.Font = new System.Drawing.Font("Arial", 9, System.Drawing.FontStyle.Bold);
 
-            // Quality Slider - larger
+            // Quality Slider
             _qualitySlider = new TrackBar();
             _qualitySlider.Left = 15;
-            _qualitySlider.Top = 175;
-            _qualitySlider.Width = 320;        // Increased from 250
+            _qualitySlider.Top = qualityLabelTop + 25;
+            _qualitySlider.Width = 380;
             _qualitySlider.Height = 40;
+            _qualitySlider.Margin = new System.Windows.Forms.Padding(5);
             _qualitySlider.Minimum = 1;
             _qualitySlider.Maximum = 100;
             _qualitySlider.Value = 95;
@@ -105,10 +115,12 @@ namespace VesselStudioSimplePlugin.UI
             // Quality Value Label
             _qualityValueLabel = new Label();
             _qualityValueLabel.Text = "95";
-            _qualityValueLabel.Left = 345;
-            _qualityValueLabel.Top = 178;
-            _qualityValueLabel.Width = 60;
+            _qualityValueLabel.Left = 405;
+            _qualityValueLabel.Top = qualityLabelTop + 28;
+            _qualityValueLabel.Width = 40;
             _qualityValueLabel.Height = 20;
+            _qualityValueLabel.AutoSize = false;
+            _qualityValueLabel.Margin = new System.Windows.Forms.Padding(5);
             _qualityValueLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             _qualityValueLabel.Font = new System.Drawing.Font("Arial", 10, System.Drawing.FontStyle.Bold);
             _qualityValueLabel.ForeColor = System.Drawing.Color.FromArgb(0, 102, 204);
@@ -121,31 +133,43 @@ namespace VesselStudioSimplePlugin.UI
             _imageGroupBox.Controls.Add(_qualitySlider);
             _imageGroupBox.Controls.Add(_qualityValueLabel);
 
-            // OK Button - larger with proper spacing
+            // Set GroupBox height based on all contained controls
+            int groupBoxHeight = qualityLabelTop + 60 + 15;  // Quality area height + padding
+            _imageGroupBox.Height = groupBoxHeight;
+
+            // Calculate button positions based on GroupBox
+            int buttonTopPos = _imageGroupBox.Top + _imageGroupBox.Height + 15;
+
+            // OK Button
             _okButton = new Button();
             _okButton.Text = "OK";
             _okButton.DialogResult = DialogResult.OK;
-            _okButton.Left = 270;
-            _okButton.Top = 270;
+            _okButton.Left = 315;
+            _okButton.Top = buttonTopPos;
             _okButton.Width = 90;
             _okButton.Height = 35;
+            _okButton.Margin = new System.Windows.Forms.Padding(5);
             _okButton.Font = new System.Drawing.Font("Arial", 9, System.Drawing.FontStyle.Bold);
             _okButton.Click += OkButton_Click;
 
-            // Cancel Button - larger with proper spacing
+            // Cancel Button
             _cancelButton = new Button();
             _cancelButton.Text = "Cancel";
             _cancelButton.DialogResult = DialogResult.Cancel;
-            _cancelButton.Left = 375;
-            _cancelButton.Top = 270;
+            _cancelButton.Left = 415;
+            _cancelButton.Top = buttonTopPos;
             _cancelButton.Width = 90;
             _cancelButton.Height = 35;
+            _cancelButton.Margin = new System.Windows.Forms.Padding(5);
             _cancelButton.Font = new System.Drawing.Font("Arial", 9, System.Drawing.FontStyle.Bold);
 
             // Add controls to form
             this.Controls.Add(_imageGroupBox);
             this.Controls.Add(_okButton);
             this.Controls.Add(_cancelButton);
+
+            // Adjust form height to fit all content
+            this.Height = buttonTopPos + 50 + 15;
 
             // Set accept and cancel buttons
             this.AcceptButton = _okButton;

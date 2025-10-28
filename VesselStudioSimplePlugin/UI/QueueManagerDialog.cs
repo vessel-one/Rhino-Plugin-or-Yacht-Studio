@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Rhino;
 using VesselStudioSimplePlugin.Models;
 using VesselStudioSimplePlugin.Services;
 
@@ -25,7 +29,10 @@ namespace VesselStudioSimplePlugin.UI
         private Button _removeSelectedButton;
         private Button _clearAllButton;
         private Button _exportAllButton;
+        private Button _settingsButton;
         private Button _closeButton;
+        private ProgressBar _uploadProgressBar;
+        private Label _progressStatusLabel;
 
         public QueueManagerDialog()
         {
@@ -69,17 +76,39 @@ namespace VesselStudioSimplePlugin.UI
             var buttonPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 50,
+                Height = 80,
                 BackColor = SystemColors.Control
             };
             this.Controls.Add(buttonPanel);
+
+            // Add progress bar (hidden by default, shown during export)
+            _uploadProgressBar = new ProgressBar
+            {
+                Size = new Size(580, 20),
+                Location = new Point(10, 10),
+                Visible = false,
+                Style = ProgressBarStyle.Continuous
+            };
+            buttonPanel.Controls.Add(_uploadProgressBar);
+
+            // Add progress status label
+            _progressStatusLabel = new Label
+            {
+                Text = "Uploading...",
+                Size = new Size(300, 20),
+                Location = new Point(10, 35),
+                Visible = false,
+                Font = new Font("Arial", 9, FontStyle.Regular),
+                ForeColor = SystemColors.ControlText
+            };
+            buttonPanel.Controls.Add(_progressStatusLabel);
 
             // T031: Remove Selected button
             _removeSelectedButton = new Button
             {
                 Text = "Remove Selected",
                 Size = new Size(120, 30),
-                Location = new Point(10, 10)
+                Location = new Point(10, 40)
             };
             _removeSelectedButton.Click += OnRemoveSelectedClick;
             buttonPanel.Controls.Add(_removeSelectedButton);
@@ -89,7 +118,7 @@ namespace VesselStudioSimplePlugin.UI
             {
                 Text = "Clear All",
                 Size = new Size(100, 30),
-                Location = new Point(140, 10)
+                Location = new Point(140, 40)
             };
             _clearAllButton.Click += OnClearAllClick;
             buttonPanel.Controls.Add(_clearAllButton);
@@ -99,17 +128,35 @@ namespace VesselStudioSimplePlugin.UI
             {
                 Text = "Export All",
                 Size = new Size(100, 30),
-                Location = new Point(250, 10)
+                Location = new Point(250, 40)
             };
             _exportAllButton.Click += OnExportAllClick;
             buttonPanel.Controls.Add(_exportAllButton);
+
+            // Settings button with tooltip for image format options
+            _settingsButton = new Button
+            {
+                Text = "📸 Format",
+                Size = new Size(80, 30),
+                Location = new Point(360, 40)
+            };
+            _settingsButton.Click += OnSettingsClick;
+            
+            var tooltip = new ToolTip();
+            tooltip.SetToolTip(_settingsButton,
+                "Image Format Settings\n" +
+                "• PNG: Lossless quality (recommended)\n" +
+                "• JPEG: Configurable quality (1-100)\n" +
+                "• High quality = larger file size");
+            
+            buttonPanel.Controls.Add(_settingsButton);
 
             // T031: Close button
             _closeButton = new Button
             {
                 Text = "Close",
-                Size = new Size(100, 30),
-                Location = new Point(360, 10),
+                Size = new Size(80, 30),
+                Location = new Point(450, 40),
                 DialogResult = DialogResult.Cancel
             };
             this.CancelButton = _closeButton;
@@ -202,16 +249,178 @@ namespace VesselStudioSimplePlugin.UI
             }
         }
 
-        // T059: Export All button handler (Phase 5 placeholder)
-        private void OnExportAllClick(object sender, EventArgs e)
+        // Image format settings button handler
+        private void OnSettingsClick(object sender, EventArgs e)
         {
-            // Placeholder - will be implemented in Phase 5 (US3)
-            // T059: Will call BatchUploadService.UploadBatchAsync here
-            MessageBox.Show(
-                "Batch upload not yet implemented. This will be added in Phase 5.",
-                "Export All - Placeholder",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            // Open image format settings dialog
+            using (var dialog = new VesselImageFormatDialog())
+            {
+                dialog.ShowDialog();
+            }
+        }
+
+        // T059-T061: Export All button handler - Upload entire queue to Vessel Studio
+        // Phase 5 Group 3 Implementation
+        private async void OnExportAllClick(object sender, EventArgs e)
+        {
+            // T059: Validate prerequisites
+            var settings = VesselStudioSettings.Load();
+            
+            if (string.IsNullOrEmpty(settings?.ApiKey))
+            {
+                MessageBox.Show(
+                    "API key not configured. Please set it first using 'Set API Key' button.",
+                    "API Key Required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            var queueService = CaptureQueueService.Current;
+            if (queueService.IsEmpty)
+            {
+                MessageBox.Show(
+                    "Queue is empty. Nothing to export.",
+                    "Empty Queue",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(settings.LastProjectId))
+            {
+                MessageBox.Show(
+                    "No project selected. Please select a project from the toolbar dropdown.",
+                    "Project Required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Disable controls during upload
+            _exportAllButton.Enabled = false;
+            _removeSelectedButton.Enabled = false;
+            _clearAllButton.Enabled = false;
+            _queueListView.Enabled = false;
+
+            // Show progress bar and status
+            _uploadProgressBar.Visible = true;
+            _progressStatusLabel.Visible = true;
+            _uploadProgressBar.Value = 0;
+            _progressStatusLabel.Text = "Uploading... 0%";
+
+            try
+            {
+                // T060: Create batch upload service and execute upload
+                var apiClient = new VesselStudioApiClient();
+                apiClient.SetApiKey(settings.ApiKey);
+                var uploadService = new BatchUploadService(apiClient);
+
+                var itemCount = queueService.ItemCount;
+                RhinoApp.WriteLine($"📤 Uploading {itemCount} item{(itemCount == 1 ? "" : "s")} to project: {settings.LastProjectName}...");
+
+                // Create progress reporter
+                var progress = new Progress<BatchUploadProgress>(p =>
+                {
+                    if (p.TotalItems > 0)
+                    {
+                        // Update progress bar
+                        _uploadProgressBar.Value = (int)p.PercentComplete;
+                        _progressStatusLabel.Text = $"Uploading... {p.PercentComplete}% ({p.CompletedItems}/{p.TotalItems})";
+                        Application.DoEvents(); // Refresh UI
+                        RhinoApp.WriteLine($"[Export] {p.CompletedItems}/{p.TotalItems} - {p.CurrentFilename}");
+                    }
+                });
+
+                // T060: Execute batch upload asynchronously
+                var result = await uploadService.UploadBatchAsync(settings.LastProjectId, progress, CancellationToken.None);
+
+                // T061: Handle results and refresh dialog
+                if (result.Success)
+                {
+                    RhinoApp.WriteLine($"✅ Export complete! {result.UploadedCount} captures uploaded.");
+                    MessageBox.Show(
+                        $"✅ Batch export successful!\n\n{result.UploadedCount} capture{(result.UploadedCount == 1 ? "" : "s")} uploaded\nDuration: {result.TotalDurationMs}ms",
+                        "Export Success",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    
+                    // Close dialog on successful export
+                    this.Close();
+                }
+                else if (result.IsPartialSuccess)
+                {
+                    RhinoApp.WriteLine($"⚠ Export incomplete: {result.UploadedCount} success, {result.FailedCount} failed");
+                    var errorDetails = string.Empty;
+                    if (result.Errors.Count > 0)
+                    {
+                        errorDetails = "\n\nErrors:\n";
+                        for (int i = 0; i < Math.Min(3, result.Errors.Count); i++)
+                        {
+                            errorDetails += $"• {result.Errors[i].filename}: {result.Errors[i].error}\n";
+                        }
+                        if (result.Errors.Count > 3)
+                            errorDetails += $"... and {result.Errors.Count - 3} more";
+                    }
+
+                    MessageBox.Show(
+                        $"⚠ Partial success\n\nUploaded: {result.UploadedCount}\nFailed: {result.FailedCount}\n\nQueue preserved for retry." + errorDetails,
+                        "Export Partial Failure",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    
+                    // Refresh to show updated queue
+                    LoadQueueItems();
+                }
+                else
+                {
+                    RhinoApp.WriteLine($"❌ Export failed: {result.FailedCount} items failed");
+                    var errorDetails = string.Empty;
+                    if (result.Errors.Count > 0)
+                    {
+                        errorDetails = "\n\nErrors:\n";
+                        for (int i = 0; i < Math.Min(3, result.Errors.Count); i++)
+                        {
+                            errorDetails += $"• {result.Errors[i].filename}: {result.Errors[i].error}\n";
+                        }
+                        if (result.Errors.Count > 3)
+                            errorDetails += $"... and {result.Errors.Count - 3} more";
+                    }
+
+                    MessageBox.Show(
+                        $"❌ Export failed\n\nFailed: {result.FailedCount}\n\nQueue preserved for retry." + errorDetails,
+                        "Export Failure",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    
+                    // Refresh to show queue
+                    LoadQueueItems();
+                }
+            }
+            catch (Exception ex)
+            {
+                RhinoApp.WriteLine($"❌ Unexpected error during export: {ex.Message}");
+                MessageBox.Show(
+                    $"Unexpected error: {ex.Message}",
+                    "Export Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                
+                // Refresh to show queue
+                LoadQueueItems();
+            }
+            finally
+            {
+                // Re-enable controls
+                _exportAllButton.Enabled = true;
+                _removeSelectedButton.Enabled = true;
+                _clearAllButton.Enabled = true;
+                _queueListView.Enabled = true;
+
+                // Hide progress bar
+                _uploadProgressBar.Visible = false;
+                _progressStatusLabel.Visible = false;
+            }
         }
 
         // T039: Proper disposal of resources

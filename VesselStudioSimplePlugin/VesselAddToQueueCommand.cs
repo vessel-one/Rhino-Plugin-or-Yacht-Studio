@@ -50,18 +50,33 @@ namespace VesselStudioSimplePlugin
                     return Result.Failure;
                 }
 
-                // 3. Convert to JPEG bytes (compressed for queue storage)
+                // 3. Convert to image bytes with selected format
                 byte[] imageData;
                 try
                 {
                     using (var ms = new MemoryStream())
                     {
-                        // Use JPEG format with 85% quality for good compression
-                        var jpegEncoder = GetEncoder(ImageFormat.Jpeg);
-                        var encoderParams = new EncoderParameters(1);
-                        encoderParams.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 85L);
+                        var settings = VesselStudioSettings.Load();
                         
-                        bitmap.Save(ms, jpegEncoder, encoderParams);
+                        if (settings.ImageFormat?.ToLower() == "jpeg")
+                        {
+                            // JPEG format with user-selected quality
+                            var jpegEncoder = GetEncoder(ImageFormat.Jpeg);
+                            var encoderParams = new EncoderParameters(1);
+                            encoderParams.Param[0] = new EncoderParameter(
+                                System.Drawing.Imaging.Encoder.Quality, 
+                                (long)settings.JpegQuality);
+                            
+                            bitmap.Save(ms, jpegEncoder, encoderParams);
+                            RhinoApp.WriteLine($"📸 Compressed as JPEG (quality: {settings.JpegQuality}%)");
+                        }
+                        else
+                        {
+                            // PNG format (lossless, default)
+                            bitmap.Save(ms, ImageFormat.Png);
+                            RhinoApp.WriteLine("📸 Saved as PNG (lossless)");
+                        }
+                        
                         imageData = ms.ToArray();
                     }
                 }

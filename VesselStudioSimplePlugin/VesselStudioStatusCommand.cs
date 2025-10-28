@@ -44,34 +44,27 @@ namespace VesselStudioSimplePlugin
                 {
                     RhinoApp.WriteLine("✅ Authentication: Logged in with API key");
                     
-                    // Test connection
-                    RhinoApp.WriteLine("Testing connection...");
-                    var testTask = plugin.ApiClient.TestConnectionAsync();
-                    var connectionOk = testTask.GetAwaiter().GetResult();
-                    
-                    if (connectionOk)
-                    {
-                        RhinoApp.WriteLine("✅ Connection: API is reachable");
-                        RhinoApp.WriteLine("");
-                        RhinoApp.WriteLine("Ready to capture! Use 'VesselStudioCapture' command");
-                    }
-                    else
-                    {
-                        RhinoApp.WriteLine("❌ Connection: Cannot reach Vessel Studio API");
-                        RhinoApp.WriteLine("Check your internet connection");
-                    }
+                    // Note: Connection testing removed - was causing UI freezes with async/await
+                    // The API key validation is sufficient to confirm authentication
+                    RhinoApp.WriteLine("✅ API key is configured and ready");
+                    RhinoApp.WriteLine("");
+                    RhinoApp.WriteLine("Ready to capture! Use commands:");
+                    RhinoApp.WriteLine("  • VesselCapture - Capture and add to queue");
+                    RhinoApp.WriteLine("  • VesselStudioShowToolbar - Show toolbar");
                 }
                 else
                 {
                     RhinoApp.WriteLine("❌ Authentication: No API key set");
-                    RhinoApp.WriteLine("Use 'VesselStudioSetApiKey' command to authenticate");
+                    RhinoApp.WriteLine("Use 'VesselSetApiKey' command to authenticate");
                 }
 
                 RhinoApp.WriteLine("");
                 RhinoApp.WriteLine("Available commands:");
-                RhinoApp.WriteLine("- VesselStudioSetApiKey: Set your API key");
-                RhinoApp.WriteLine("- VesselStudioCapture: Capture and upload viewport");
-                RhinoApp.WriteLine("- VesselStudioStatus: Show this status");
+                RhinoApp.WriteLine("  • VesselSetApiKey - Set your API key");
+                RhinoApp.WriteLine("  • VesselCapture - Capture viewport and add to queue");
+                RhinoApp.WriteLine("  • VesselImageSettings - Configure image format (PNG/JPEG)");
+                RhinoApp.WriteLine("  • VesselQueueManagerCommand - View and manage queue");
+                RhinoApp.WriteLine("  • VesselStudioStatus - Show this status");
 
                 return Result.Success;
             }

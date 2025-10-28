@@ -27,6 +27,7 @@ namespace VesselStudioSimplePlugin
         private ModernButton _addToQueueButton;
         private ModernButton _quickExportBatchButton;
         private ModernButton _settingsButton;
+        private ModernButton _imageFormatButton;
         private ModernButton _refreshProjectsButton;
         private ComboBox _projectComboBox;
         private Label _statusLabel;
@@ -109,6 +110,25 @@ namespace VesselStudioSimplePlugin
             };
             _settingsButton.Click += OnSettingsClick;
             this.Controls.Add(_settingsButton);
+            yPos += 50;
+
+            // Image Format Settings button (tooltip for quality options)
+            _imageFormatButton = new ModernButton("🖼️  Image Format", Color.FromArgb(108, 117, 125))
+            {
+                Location = new Point(15, yPos),
+                Size = new Size(250, 35),
+                Font = new Font("Segoe UI", 9f)
+            };
+            _imageFormatButton.Click += OnImageFormatClick;
+            
+            // Add tooltip explaining format options
+            var tooltip = new ToolTip();
+            tooltip.SetToolTip(_imageFormatButton, 
+                "PNG: Lossless quality (recommended)\n" +
+                "JPEG: Compressed (configurable 1-100)\n" +
+                "Click to change image format and quality");
+            
+            this.Controls.Add(_imageFormatButton);
             yPos += 50;
 
             // Project section header
@@ -260,6 +280,16 @@ namespace VesselStudioSimplePlugin
             UpdateStatus();
             // Reload projects after API key change
             LoadProjectsAsync();
+        }
+
+        private void OnImageFormatClick(object sender, EventArgs e)
+        {
+            // Open image format settings dialog
+#if DEV
+            RhinoApp.RunScript("DevVesselImageSettings", false);
+#else
+            RhinoApp.RunScript("VesselImageSettings", false);
+#endif
         }
 
         private void OnProjectChanged(object sender, EventArgs e)

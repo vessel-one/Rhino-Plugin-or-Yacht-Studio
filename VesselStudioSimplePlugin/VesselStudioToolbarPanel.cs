@@ -109,24 +109,23 @@ namespace VesselStudioSimplePlugin
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = primaryColor,
                 AutoSize = true,
-                Margin = new Padding(0, 5, 0, 0)
+                Margin = new Padding(0, 8, 10, 0)
             };
             headerPanel.Controls.Add(titleLabel);
 
-            // Settings cog button (top-right)
+            // Settings button
             _settingsButton = new Button
             {
-                Text = "⚙️",
-                Size = new Size(35, 35),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White,
-                Margin = new Padding(5, 0, 0, 0),
+                Text = "Settings",
+                Size = new Size(80, 30),
+                FlatStyle = FlatStyle.Standard,
+                Font = new Font("Segoe UI", 9f),
+                Margin = new Padding(0, 5, 0, 0),
                 Cursor = Cursors.Hand
             };
-            _settingsButton.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
             _settingsButton.Click += OnSettingsClick;
             var settingsTooltip = new ToolTip();
-            settingsTooltip.SetToolTip(_settingsButton, "Settings (API Key & Image Format)");
+            settingsTooltip.SetToolTip(_settingsButton, "API Key & Image Format Settings");
             headerPanel.Controls.Add(_settingsButton);
 
             mainLayout.Controls.Add(headerPanel, 0, 0);
@@ -209,8 +208,6 @@ namespace VesselStudioSimplePlugin
                 Height = 45,
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 FlatStyle = FlatStyle.Standard,
-                BackColor = Color.FromArgb(40, 167, 69),
-                ForeColor = Color.White,
                 Margin = new Padding(0, 0, 0, 10),
                 Cursor = Cursors.Hand
             };
@@ -225,8 +222,6 @@ namespace VesselStudioSimplePlugin
                 Height = 40,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 FlatStyle = FlatStyle.Standard,
-                BackColor = Color.FromArgb(108, 117, 125),
-                ForeColor = Color.White,
                 Margin = new Padding(0, 0, 0, 10),
                 Cursor = Cursors.Hand
             };
@@ -257,8 +252,6 @@ namespace VesselStudioSimplePlugin
                 Height = 40,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 FlatStyle = FlatStyle.Standard,
-                BackColor = Color.FromArgb(0, 120, 215),
-                ForeColor = Color.White,
                 Enabled = false,
                 Margin = new Padding(0, 0, 0, 10),
                 Cursor = Cursors.Hand

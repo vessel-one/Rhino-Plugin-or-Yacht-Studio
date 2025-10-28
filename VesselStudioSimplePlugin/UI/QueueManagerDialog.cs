@@ -59,22 +59,7 @@ namespace VesselStudioSimplePlugin.UI
                 ColorDepth = ColorDepth.Depth32Bit
             };
 
-            // T030: ListView with columns - Docked to fill
-            _queueListView = new ListView
-            {
-                Dock = DockStyle.Fill,
-                View = View.Details,
-                CheckBoxes = true,
-                FullRowSelect = true,
-                SmallImageList = _thumbnailImageList,
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
-            };
-            _queueListView.Columns.Add("Thumbnail", 120);
-            _queueListView.Columns.Add("Viewport Name", 200);
-            _queueListView.Columns.Add("Timestamp", 150);
-            this.Controls.Add(_queueListView);
-
-            // T031: Bottom panel for buttons with TableLayoutPanel
+            // T031: Bottom panel for buttons with TableLayoutPanel - ADD FIRST for docking order
             var buttonPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
@@ -87,6 +72,20 @@ namespace VesselStudioSimplePlugin.UI
             buttonPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 60F));  // Progress area
             buttonPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));  // Buttons area
             this.Controls.Add(buttonPanel);
+
+            // T030: ListView with columns - ADD SECOND so it fills remaining space
+            _queueListView = new ListView
+            {
+                Dock = DockStyle.Fill,
+                View = View.Details,
+                CheckBoxes = true,
+                FullRowSelect = true,
+                SmallImageList = _thumbnailImageList
+            };
+            _queueListView.Columns.Add("Thumbnail", 120);
+            _queueListView.Columns.Add("Viewport Name", 200);
+            _queueListView.Columns.Add("Timestamp", 150);
+            this.Controls.Add(_queueListView);
 
             // Progress area panel
             var progressPanel = new Panel
@@ -164,14 +163,14 @@ namespace VesselStudioSimplePlugin.UI
             // Settings button
             _settingsButton = new Button
             {
-                Text = "⚙️ Settings",
+                Text = "Settings",
                 Size = new Size(90, 30),
                 Margin = new Padding(0, 5, 5, 5)
             };
             _settingsButton.Click += OnSettingsClick;
             
             var tooltip = new ToolTip();
-            tooltip.SetToolTip(_settingsButton, "Open Settings (API Key & Image Format)");
+            tooltip.SetToolTip(_settingsButton, "API Key & Image Format Settings");
             
             buttonFlow.Controls.Add(_settingsButton);
 

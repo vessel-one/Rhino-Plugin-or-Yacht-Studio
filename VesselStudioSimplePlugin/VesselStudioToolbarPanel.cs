@@ -7,6 +7,8 @@ using System.Windows.Forms;
 using Rhino;
 using Rhino.Commands;
 using Rhino.UI;
+using VesselStudioSimplePlugin.Models;
+using VesselStudioSimplePlugin.Services;
 
 namespace VesselStudioSimplePlugin
 {
@@ -21,11 +23,14 @@ namespace VesselStudioSimplePlugin
     public class VesselStudioToolbarPanel : Panel
     {
         private ModernButton _captureButton;
+        private ModernButton _addToQueueButton;
+        private ModernButton _quickExportBatchButton;
         private ModernButton _settingsButton;
         private ModernButton _refreshProjectsButton;
         private ComboBox _projectComboBox;
         private Label _statusLabel;
         private Label _projectLabel;
+        private Label _batchBadgeLabel;
         private CardPanel _statusPanel;
         private List<VesselProject> _projects;
 
@@ -34,6 +39,14 @@ namespace VesselStudioSimplePlugin
             InitializeComponents();
             UpdateStatus();
             LoadProjectsAsync();
+
+            // T022-T024: Subscribe to queue events for badge updates
+            CaptureQueueService.Current.ItemAdded += OnQueueItemAdded;
+            CaptureQueueService.Current.ItemRemoved += OnQueueItemRemoved;
+            CaptureQueueService.Current.QueueCleared += OnQueueCleared;
+
+            // Update badge on initialization
+            UpdateBatchBadge();
         }
 
         private void InitializeComponents()
@@ -147,7 +160,43 @@ namespace VesselStudioSimplePlugin
             this.Controls.Add(_captureButton);
             yPos += 60;
 
-            // Info card
+            // Add to Batch Queue button (T021)
+            _addToQueueButton = new ModernButton("➕ Add to Batch Queue", Color.FromArgb(108, 117, 125))
+            {
+                Location = new Point(15, yPos),
+                Size = new Size(250, 40),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
+            };
+            _addToQueueButton.Click += OnAddToQueueClick;
+            this.Controls.Add(_addToQueueButton);
+            yPos += 50;
+
+            // Batch Badge Label (T022-T024) - shows queue count
+            _batchBadgeLabel = new Label
+            {
+                Text = "📦 Batch (0)",
+                Location = new Point(15, yPos),
+                Size = new Size(250, 28),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(255, 107, 53),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Visible = false  // Hidden until items are queued
+            };
+            _batchBadgeLabel.Click += OnBatchBadgeClick;
+            this.Controls.Add(_batchBadgeLabel);
+            yPos += 38;
+
+            // T053: Quick Export Batch button below badge, initially disabled
+            _quickExportBatchButton = new ModernButton("📤 Quick Export Batch", Color.FromArgb(0, 120, 215))
+            {
+                Location = new Point(15, yPos),
+                Size = new Size(250, 40),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Enabled = false  // T054: Initially disabled (no queue items)
+            };
+            _quickExportBatchButton.Click += OnQuickExportBatchClick;
+            this.Controls.Add(_quickExportBatchButton);
+            yPos += 50;
             var infoCard = new CardPanel
             {
                 Location = new Point(15, yPos),
@@ -157,7 +206,7 @@ namespace VesselStudioSimplePlugin
 
             var helpLabel = new Label
             {
-                Text = "💡 Quick Tip\nUploads happen in background.\nYou can continue working!",
+                Text = "💡 Quick Tip\nQueue captures then export\nthe batch when ready!",
                 Location = new Point(12, 10),
                 Size = new Size(226, 60),
                 Font = new Font("Segoe UI", 8.5f),
@@ -256,6 +305,191 @@ namespace VesselStudioSimplePlugin
 #else
             RhinoApp.RunScript("VesselCapture", false);
 #endif
+        }
+
+        /// <summary>
+        /// T021: Handle "Add to Batch Queue" button click
+        /// Executes VesselAddToQueueCommand to capture and queue the viewport
+        /// </summary>
+        private void OnAddToQueueClick(object sender, EventArgs e)
+        {
+#if DEV
+            RhinoApp.RunScript("DevVesselAddToQueue", false);
+#else
+            RhinoApp.RunScript("VesselAddToQueue", false);
+#endif
+        }
+
+        /// <summary>
+        /// T024: Handle batch badge click (placeholder for queue manager dialog in Phase 4)
+        /// Currently just shows queue count and guidance
+        /// </summary>
+        private void OnBatchBadgeClick(object sender, EventArgs e)
+        {
+            var count = CaptureQueueService.Current.ItemCount;
+            RhinoApp.WriteLine($"📦 Batch queue: {count} item{(count == 1 ? "" : "s")}");
+            RhinoApp.WriteLine("💡 Phase 4: Queue Manager dialog coming soon to view and manage captures");
+        }
+
+        /// <summary>
+        /// T055-T058: Handle "Quick Export Batch" button click
+        /// Uploads all queued captures to Vessel Studio as a batch (User Story 3)
+        /// </summary>
+        private async void OnQuickExportBatchClick(object sender, EventArgs e)
+        {
+            // T056: Get project ID from dropdown
+            if (!(_projectComboBox.SelectedItem is VesselProject selectedProject))
+            {
+                MessageBox.Show("Please select a project first.", "No Project Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var settings = VesselStudioSettings.Load();
+            if (string.IsNullOrEmpty(settings?.ApiKey))
+            {
+                MessageBox.Show("API key not configured. Please set your API key first.", "Not Configured", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Disable button during upload
+            _quickExportBatchButton.Enabled = false;
+            RhinoApp.WriteLine($"[QuickExportBatch] Starting batch upload to project: {selectedProject.Name}");
+
+            try
+            {
+                // T055: Create BatchUploadService with API client
+                var apiClient = new VesselStudioApiClient();
+                apiClient.SetApiKey(settings.ApiKey);
+                var uploadService = new BatchUploadService(apiClient);
+
+                // Create progress reporter
+                var progress = new Progress<BatchUploadProgress>(p =>
+                {
+                    RhinoApp.WriteLine(
+                        $"[QuickExportBatch] Progress: {p.CompletedItems}/{p.TotalItems} completed - {p.PercentComplete}%");
+                });
+
+                // T055: Call UploadBatchAsync
+                var result = await uploadService.UploadBatchAsync(selectedProject.Id, progress);
+
+                // T057-T058: Show success or failure message
+                if (result.Success)
+                {
+                    // T057: Complete success
+                    MessageBox.Show(
+                        $"✅ Batch upload complete!\n\n" +
+                        $"Successfully uploaded {result.UploadedCount} capture{(result.UploadedCount == 1 ? "" : "s")}.\n" +
+                        $"Duration: {result.TotalDurationMs}ms",
+                        "Upload Successful",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    RhinoApp.WriteLine($"[QuickExportBatch] ✅ Upload successful: {result.UploadedCount} items uploaded");
+                }
+                else if (result.IsPartialSuccess)
+                {
+                    // T058: Partial success - preserve queue for retry (FR-008)
+                    var errorMsg = string.Join("\n", result.Errors.Take(3).Select(err => $"• {err.filename}: {err.error}"));
+                    if (result.Errors.Count > 3)
+                        errorMsg += $"\n... and {result.Errors.Count - 3} more errors";
+
+                    MessageBox.Show(
+                        $"⚠ Batch upload incomplete\n\n" +
+                        $"Successful: {result.UploadedCount}\n" +
+                        $"Failed: {result.FailedCount}\n\n" +
+                        $"Errors:\n{errorMsg}\n\n" +
+                        $"Queue preserved for retry.",
+                        "Partial Upload",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    RhinoApp.WriteLine(
+                        $"[QuickExportBatch] ⚠ Partial upload: {result.UploadedCount} successful, {result.FailedCount} failed");
+                }
+                else
+                {
+                    // T058: Complete failure - preserve queue (FR-008)
+                    var errorMsg = string.Join("\n", result.Errors.Take(3).Select(err => $"• {err.filename}: {err.error}"));
+                    MessageBox.Show(
+                        $"❌ Batch upload failed\n\n" +
+                        $"Errors:\n{errorMsg}\n\n" +
+                        $"Queue preserved. Please check your connection and try again.",
+                        "Upload Failed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    RhinoApp.WriteLine($"[QuickExportBatch] ❌ Upload failed: {result.FailedCount} items failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"❌ An unexpected error occurred:\n\n{ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                RhinoApp.WriteLine($"[QuickExportBatch] ❌ Exception: {ex.Message}");
+            }
+            finally
+            {
+                // Re-enable button
+                UpdateBatchBadge();  // Will re-enable if queue still has items
+            }
+        }
+
+        /// <summary>
+        /// T022: Handle ItemAdded event from CaptureQueueService
+        /// Updates batch badge to show new queue count
+        /// </summary>
+        private void OnQueueItemAdded(object sender, ItemAddedEventArgs e)
+        {
+            UpdateBatchBadge();
+        }
+
+        /// <summary>
+        /// T023: Handle ItemRemoved event from CaptureQueueService
+        /// Updates batch badge to show new queue count
+        /// </summary>
+        private void OnQueueItemRemoved(object sender, ItemRemovedEventArgs e)
+        {
+            UpdateBatchBadge();
+        }
+
+        /// <summary>
+        /// T023: Handle QueueCleared event from CaptureQueueService
+        /// Updates batch badge to reflect empty queue
+        /// </summary>
+        private void OnQueueCleared(object sender, EventArgs e)
+        {
+            UpdateBatchBadge();
+        }
+
+        /// <summary>
+        /// T022-T024: Update batch badge label visibility and text based on queue count
+        /// Visible when count > 0, hidden when count = 0
+        /// T054: Also enable/disable Quick Export button based on queue count
+        /// </summary>
+        private void UpdateBatchBadge()
+        {
+            // Thread-safe UI update
+            if (InvokeRequired)
+            {
+                Invoke(new Action(UpdateBatchBadge));
+                return;
+            }
+
+            var count = CaptureQueueService.Current.ItemCount;
+
+            if (count > 0)
+            {
+                _batchBadgeLabel.Text = $"📦 Batch ({count})";
+                _batchBadgeLabel.Visible = true;
+                // T054: Enable Quick Export button when queue has items
+                _quickExportBatchButton.Enabled = true;
+            }
+            else
+            {
+                _batchBadgeLabel.Visible = false;
+                // T054: Disable Quick Export button when queue is empty (FR-012)
+                _quickExportBatchButton.Enabled = false;
+            }
         }
 
         private async void LoadProjectsAsync()
@@ -458,11 +692,14 @@ namespace VesselStudioSimplePlugin
             if (disposing)
             {
                 _captureButton?.Dispose();
+                _addToQueueButton?.Dispose();
+                _quickExportBatchButton?.Dispose();
                 _settingsButton?.Dispose();
                 _refreshProjectsButton?.Dispose();
                 _projectComboBox?.Dispose();
                 _projectLabel?.Dispose();
                 _statusLabel?.Dispose();
+                _batchBadgeLabel?.Dispose();
                 _statusPanel?.Dispose();
             }
             base.Dispose(disposing);

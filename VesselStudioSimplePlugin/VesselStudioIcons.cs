@@ -33,41 +33,35 @@ namespace VesselStudioSimplePlugin
             if (_panelIcon != null)
                 return _panelIcon;
 
-            // Load 32x32 icon from embedded resources
-            var bitmap = LoadEmbeddedIcon("icon_32.png");
+            // Load 24x24 bitmap for panel tab (Rhino uses smaller icons in tabs)
+            var bitmap = LoadEmbeddedIcon("icon_24.png");
             if (bitmap == null)
             {
                 // Fallback to generated icon if resource not found
-                bitmap = CreateFallbackIconBitmap(32);
+                bitmap = CreateFallbackIconBitmap(24);
             }
 
             try
             {
-                // Convert bitmap to icon - must use Bitmap.MakeTransparent() first for proper alpha
-                bitmap.MakeTransparent(bitmap.GetPixel(0, 0));
+                // Convert bitmap to icon - simpler approach without MakeTransparent
                 IntPtr hIcon = bitmap.GetHicon();
-                try
-                {
-                    _panelIcon = Icon.FromHandle(hIcon);
-                }
-                finally
-                {
-                    // Clean up the handle to avoid COM errors
-                    DestroyIcon(hIcon);
-                }
+                _panelIcon = Icon.FromHandle(hIcon);
+                // Note: Don't call DestroyIcon here as Icon.FromHandle creates a clone
             }
-            catch
+            catch (Exception ex)
             {
-                // If icon conversion fails, create a simple icon from bitmap
-                _panelIcon = Icon.FromHandle(bitmap.GetHicon());
+                System.Diagnostics.Debug.WriteLine($"Icon conversion failed: {ex.Message}");
+                // Last resort: try to create icon from bitmap directly
+                using (var ms = new MemoryStream())
+                {
+                    bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    _panelIcon = new Icon(ms, 24, 24);
+                }
             }
             
             return _panelIcon;
         }
-        
-        // Import DestroyIcon from user32.dll to properly clean up icon handles
-        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        private static extern bool DestroyIcon(IntPtr handle);
 
         /// <summary>
         /// Get a toolbar button bitmap at specified size
@@ -135,6 +129,7 @@ namespace VesselStudioSimplePlugin
 
         /// <summary>
         /// Create a fallback icon bitmap if embedded resource not found
+        /// Creates a visible icon with colored background suitable for both light and dark modes
         /// </summary>
         private static Bitmap CreateFallbackIconBitmap(int size)
         {
@@ -145,29 +140,38 @@ namespace VesselStudioSimplePlugin
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 
-                // Background - Vessel Studio brand blue
-                using (var brush = new SolidBrush(Color.FromArgb(37, 99, 235)))
+                // Background - Vessel Studio brand blue (visible in both light and dark modes)
+                using (var brush = new SolidBrush(Color.FromArgb(64, 123, 255)))
                 {
-                    g.FillRectangle(brush, 0, 0, size, size);
+                    g.FillEllipse(brush, 2, 2, size - 4, size - 4);
                 }
                 
-                // Draw "VS" text in white
-                var fontSize = size * 0.45f;
-                using (var font = new Font("Segoe UI", fontSize, FontStyle.Bold))
-                using (var textBrush = new SolidBrush(Color.White))
+                // Draw ship/vessel icon using simple shapes
+                var centerX = size / 2f;
+                var centerY = size / 2f;
+                var scale = size / 32f;
+                
+                using (var whiteBrush = new SolidBrush(Color.White))
                 {
-                    var format = new StringFormat
+                    // Draw simple boat/vessel shape
+                    // Hull (trapezoid)
+                    PointF[] hull = new PointF[]
                     {
-                        Alignment = StringAlignment.Center,
-                        LineAlignment = StringAlignment.Center
+                        new PointF(centerX - 6 * scale, centerY + 4 * scale),
+                        new PointF(centerX + 6 * scale, centerY + 4 * scale),
+                        new PointF(centerX + 4 * scale, centerY + 2 * scale),
+                        new PointF(centerX - 4 * scale, centerY + 2 * scale)
                     };
-                    g.DrawString("VS", font, textBrush, new RectangleF(0, 0, size, size), format);
-                }
-                
-                // Add subtle border
-                using (var pen = new Pen(Color.FromArgb(25, 70, 180), Math.Max(1, size / 16)))
-                {
-                    g.DrawRectangle(pen, 1, 1, size - 2, size - 2);
+                    g.FillPolygon(whiteBrush, hull);
+                    
+                    // Cabin (rectangle)
+                    g.FillRectangle(whiteBrush, centerX - 3 * scale, centerY - 2 * scale, 6 * scale, 4 * scale);
+                    
+                    // Mast (line)
+                    using (var pen = new Pen(Color.White, Math.Max(1, scale)))
+                    {
+                        g.DrawLine(pen, centerX, centerY - 2 * scale, centerX, centerY - 6 * scale);
+                    }
                 }
             }
 

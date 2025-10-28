@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using Rhino;
@@ -10,7 +11,7 @@ using Rhino.UI;
 namespace VesselStudioSimplePlugin
 {
     /// <summary>
-    /// Dockable panel with toolbar buttons for Vessel Studio
+    /// Dockable panel with toolbar buttons for Vessel Studio - Modern UI Design
     /// </summary>
 #if DEV
     [System.Runtime.InteropServices.Guid("D5E6F7A8-B9C0-1D2E-3F4A-5B6C7D8E9F0A")] // DEV GUID
@@ -19,13 +20,13 @@ namespace VesselStudioSimplePlugin
 #endif
     public class VesselStudioToolbarPanel : Panel
     {
-        private Button _captureButton;
-        private Button _settingsButton;
-        private Button _refreshProjectsButton;
+        private ModernButton _captureButton;
+        private ModernButton _settingsButton;
+        private ModernButton _refreshProjectsButton;
         private ComboBox _projectComboBox;
         private Label _statusLabel;
         private Label _projectLabel;
-        private Panel _statusPanel;
+        private CardPanel _statusPanel;
         private List<VesselProject> _projects;
 
         public VesselStudioToolbarPanel()
@@ -37,129 +38,140 @@ namespace VesselStudioSimplePlugin
 
         private void InitializeComponents()
         {
-            // Main layout
-            this.Padding = new Padding(10);
-            this.BackColor = Color.FromArgb(240, 240, 240);
+            // Modern layout with gradient background
+            this.Padding = new Padding(15);
+            this.BackColor = Color.FromArgb(248, 249, 250);
 
-            int yPos = 10;
+            int yPos = 15;
 
-            // Title
+            // Title with gradient
 #if DEV
             var titleText = "Vessel Studio DEV";
-            var titleColor = Color.FromArgb(255, 140, 0); // Orange for DEV
+            var primaryColor = Color.FromArgb(255, 140, 0); // Orange for DEV
+            var secondaryColor = Color.FromArgb(255, 180, 50);
 #else
             var titleText = "Vessel Studio";
-            var titleColor = Color.FromArgb(70, 130, 180); // Blue for production
+            var primaryColor = Color.FromArgb(64, 123, 255); // Modern blue
+            var secondaryColor = Color.FromArgb(100, 149, 237);
 #endif
             
             var titleLabel = new Label
             {
                 Text = titleText,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = titleColor,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = primaryColor,
                 AutoSize = true,
-                Location = new Point(10, yPos)
+                Location = new Point(15, yPos)
             };
             this.Controls.Add(titleLabel);
-            yPos += 35; // Space for title + padding
+            yPos += 45;
 
-            // Status panel
-            _statusPanel = new Panel
+            // Status card with modern design
+            _statusPanel = new CardPanel
             {
-                Location = new Point(10, yPos),
-                Size = new Size(260, 50),
-                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(15, yPos),
+                Size = new Size(250, 70),
                 BackColor = Color.White
             };
 
             _statusLabel = new Label
             {
                 Text = "Not configured",
-                Location = new Point(10, 5),
-                Size = new Size(240, 40),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 9)
+                Location = new Point(15, 15),
+                Size = new Size(220, 40),
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9.5f),
+                ForeColor = Color.FromArgb(60, 60, 60)
             };
             _statusPanel.Controls.Add(_statusLabel);
             this.Controls.Add(_statusPanel);
-            yPos += 60; // Status panel height + padding
+            yPos += 85;
 
-            // Settings button
-            _settingsButton = CreateButton("⚙ Set API Key", 10, yPos, OnSettingsClick);
-            _settingsButton.BackColor = Color.FromArgb(70, 130, 180);
-            _settingsButton.ForeColor = Color.White;
+            // Settings button with modern style
+            _settingsButton = new ModernButton("⚙️  Set API Key", primaryColor)
+            {
+                Location = new Point(15, yPos),
+                Size = new Size(250, 40)
+            };
+            _settingsButton.Click += OnSettingsClick;
             this.Controls.Add(_settingsButton);
-            yPos += 45; // Button height + padding
+            yPos += 50;
 
-            // Project selection section
+            // Project section header
             _projectLabel = new Label
             {
-                Text = "Select Project:",
-                Location = new Point(10, yPos),
-                Size = new Size(200, 20),
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+                Text = "SELECT PROJECT",
+                Location = new Point(15, yPos),
+                Size = new Size(250, 20),
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                ForeColor = Color.FromArgb(120, 120, 120)
             };
             this.Controls.Add(_projectLabel);
-            yPos += 25;
+            yPos += 28;
 
-            // Project dropdown
+            // Modern project dropdown
             _projectComboBox = new ComboBox
             {
-                Location = new Point(10, yPos),
+                Location = new Point(15, yPos),
                 Width = 190,
+                Height = 35,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false,
-                Font = new Font("Segoe UI", 9)
+                Font = new Font("Segoe UI", 9.5f),
+                FlatStyle = FlatStyle.Flat
             };
             _projectComboBox.DisplayMember = "Name";
             _projectComboBox.ValueMember = "Id";
             _projectComboBox.SelectedIndexChanged += OnProjectChanged;
             this.Controls.Add(_projectComboBox);
 
-            // Refresh button next to dropdown
-            _refreshProjectsButton = new Button
+            // Refresh button with icon
+            _refreshProjectsButton = new ModernButton("🔄", Color.FromArgb(108, 117, 125))
             {
-                Text = "🔄",
-                Location = new Point(205, yPos),
-                Size = new Size(65, _projectComboBox.Height),
-                Font = new Font("Segoe UI", 10),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                BackColor = Color.FromArgb(100, 100, 100),
-                ForeColor = Color.White
+                Location = new Point(210, yPos),
+                Size = new Size(55, 35),
+                IsIconButton = true
             };
-            _refreshProjectsButton.FlatAppearance.BorderSize = 0;
             _refreshProjectsButton.Click += OnRefreshProjectsClick;
             this.Controls.Add(_refreshProjectsButton);
-            yPos += 45;
+            yPos += 50;
 
-            // Capture button
-            _captureButton = CreateButton("📷 Capture", 10, yPos, OnCaptureClick);
-            _captureButton.BackColor = Color.FromArgb(76, 175, 80);
-            _captureButton.ForeColor = Color.White;
+            // Capture button - prominent action
+            _captureButton = new ModernButton("📷  Capture Screenshot", Color.FromArgb(40, 167, 69))
+            {
+                Location = new Point(15, yPos),
+                Size = new Size(250, 45),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold)
+            };
+            _captureButton.Click += OnCaptureClick;
             this.Controls.Add(_captureButton);
-            yPos += 45; // Button height + padding
+            yPos += 60;
 
-            // Help text
+            // Info card
+            var infoCard = new CardPanel
+            {
+                Location = new Point(15, yPos),
+                Size = new Size(250, 65),
+                BackColor = Color.FromArgb(240, 248, 255)
+            };
+
             var helpLabel = new Label
             {
-                Text = "Select project, then capture.\nUploads happen in background.",
-                Location = new Point(10, yPos),
-                Size = new Size(260, 35),
-                Font = new Font("Segoe UI", 8),
-                ForeColor = Color.Gray
+                Text = "💡 Quick Tip\nUploads happen in background.\nYou can continue working!",
+                Location = new Point(12, 10),
+                Size = new Size(226, 45),
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(80, 80, 80)
             };
-            this.Controls.Add(helpLabel);
-            yPos += 45; // Help text height + padding
+            infoCard.Controls.Add(helpLabel);
+            this.Controls.Add(infoCard);
+            yPos += 80;
 
-            // Documentation link
-            var docLink = new LinkLabel
+            // Modern link buttons
+            var docLink = new ModernLinkLabel("📖 Documentation", primaryColor)
             {
-                Text = "📖 View Documentation",
-                Location = new Point(10, yPos),
-                Size = new Size(260, 20),
-                Font = new Font("Segoe UI", 9),
-                LinkColor = Color.FromArgb(70, 130, 180)
+                Location = new Point(15, yPos),
+                Size = new Size(250, 25)
             };
             docLink.LinkClicked += (s, e) =>
             {
@@ -170,16 +182,12 @@ namespace VesselStudioSimplePlugin
                 catch { }
             };
             this.Controls.Add(docLink);
-            yPos += 25; // Link height + padding
+            yPos += 30;
 
-            // About link
-            var aboutLink = new LinkLabel
+            var aboutLink = new ModernLinkLabel("ℹ️ About Plugin", primaryColor)
             {
-                Text = "ℹ About Plugin",
-                Location = new Point(10, yPos),
-                Size = new Size(260, 20),
-                Font = new Font("Segoe UI", 9),
-                LinkColor = Color.FromArgb(70, 130, 180)
+                Location = new Point(15, yPos),
+                Size = new Size(250, 25)
             };
             aboutLink.LinkClicked += (s, e) =>
             {
@@ -190,23 +198,6 @@ namespace VesselStudioSimplePlugin
 #endif
             };
             this.Controls.Add(aboutLink);
-            yPos += 30; // Link height + bottom padding to ensure visibility
-        }
-
-        private Button CreateButton(string text, int x, int y, EventHandler onClick)
-        {
-            var button = new Button
-            {
-                Text = text,
-                Location = new Point(x, y),
-                Size = new Size(260, 35),
-                Font = new Font("Segoe UI", 10),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            button.FlatAppearance.BorderSize = 0;
-            button.Click += onClick;
-            return button;
         }
 
         private void OnSettingsClick(object sender, EventArgs e)
@@ -477,4 +468,271 @@ namespace VesselStudioSimplePlugin
             base.Dispose(disposing);
         }
     }
+
+    /// <summary>
+    /// Modern button with rounded corners, hover effects, and smooth animations
+    /// </summary>
+    public class ModernButton : Button
+    {
+        private Color _baseColor;
+        private Color _hoverColor;
+        private Color _pressColor;
+        private bool _isHovering;
+        private bool _isPressing;
+        private System.Windows.Forms.Timer _animationTimer;
+        private float _animationProgress;
+        public bool IsIconButton { get; set; }
+
+        public ModernButton(string text, Color baseColor) : base()
+        {
+            this.Text = text;
+            _baseColor = baseColor;
+            _hoverColor = LightenColor(baseColor, 20);
+            _pressColor = DarkenColor(baseColor, 20);
+            
+            this.FlatStyle = FlatStyle.Flat;
+            this.FlatAppearance.BorderSize = 0;
+            this.BackColor = baseColor;
+            this.ForeColor = Color.White;
+            this.Cursor = Cursors.Hand;
+            this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            
+            // Enable double buffering for smooth animations
+            this.SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | 
+                         ControlStyles.OptimizedDoubleBuffer, true);
+
+            // Animation timer
+            _animationTimer = new System.Windows.Forms.Timer { Interval = 16 }; // ~60 FPS
+            _animationTimer.Tick += AnimationTimer_Tick;
+        }
+
+        private void AnimationTimer_Tick(object sender, EventArgs e)
+        {
+            if (_isHovering && _animationProgress < 1.0f)
+            {
+                _animationProgress += 0.15f;
+                if (_animationProgress >= 1.0f) _animationProgress = 1.0f;
+                this.Invalidate();
+            }
+            else if (!_isHovering && _animationProgress > 0.0f)
+            {
+                _animationProgress -= 0.15f;
+                if (_animationProgress <= 0.0f) _animationProgress = 0.0f;
+                this.Invalidate();
+            }
+            else
+            {
+                _animationTimer.Stop();
+            }
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            _isHovering = true;
+            _animationTimer.Start();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _isHovering = false;
+            _animationTimer.Start();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            base.OnMouseDown(e);
+            _isPressing = true;
+            this.Invalidate();
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            base.OnMouseUp(e);
+            _isPressing = false;
+            this.Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+            // Calculate current color based on animation progress
+            Color currentColor;
+            if (_isPressing)
+            {
+                currentColor = _pressColor;
+            }
+            else if (_animationProgress > 0)
+            {
+                currentColor = BlendColors(_baseColor, _hoverColor, _animationProgress);
+            }
+            else
+            {
+                currentColor = _baseColor;
+            }
+
+            // Adjust for disabled state
+            if (!this.Enabled)
+            {
+                currentColor = Color.FromArgb(180, 180, 180);
+            }
+
+            // Draw rounded rectangle background
+            int cornerRadius = IsIconButton ? 8 : 10;
+            using (var path = GetRoundedRectPath(ClientRectangle, cornerRadius))
+            {
+                // Shadow effect
+                if (this.Enabled && _animationProgress > 0)
+                {
+                    var shadowRect = ClientRectangle;
+                    shadowRect.Inflate(1, 1);
+                    shadowRect.Offset(0, 2);
+                    using (var shadowPath = GetRoundedRectPath(shadowRect, cornerRadius))
+                    using (var shadowBrush = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
+                    {
+                        g.FillPath(shadowBrush, shadowPath);
+                    }
+                }
+
+                // Button background
+                using (var brush = new SolidBrush(currentColor))
+                {
+                    g.FillPath(brush, path);
+                }
+            }
+
+            // Draw text
+            var textColor = this.Enabled ? Color.White : Color.FromArgb(150, 150, 150);
+            TextRenderer.DrawText(g, this.Text, this.Font, ClientRectangle, textColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        }
+
+        private GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
+        {
+            var path = new GraphicsPath();
+            rect.Inflate(-1, -1); // Slight inset for cleaner edges
+            
+            path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+            path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+            path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+            path.CloseFigure();
+            
+            return path;
+        }
+
+        private Color LightenColor(Color color, int amount)
+        {
+            return Color.FromArgb(
+                Math.Min(255, color.R + amount),
+                Math.Min(255, color.G + amount),
+                Math.Min(255, color.B + amount));
+        }
+
+        private Color DarkenColor(Color color, int amount)
+        {
+            return Color.FromArgb(
+                Math.Max(0, color.R - amount),
+                Math.Max(0, color.G - amount),
+                Math.Max(0, color.B - amount));
+        }
+
+        private Color BlendColors(Color c1, Color c2, float ratio)
+        {
+            ratio = Math.Max(0, Math.Min(1, ratio));
+            return Color.FromArgb(
+                (int)(c1.R + (c2.R - c1.R) * ratio),
+                (int)(c1.G + (c2.G - c1.G) * ratio),
+                (int)(c1.B + (c2.B - c1.B) * ratio));
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _animationTimer?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>
+    /// Card-style panel with rounded corners and subtle shadow
+    /// </summary>
+    public class CardPanel : Panel
+    {
+        public CardPanel()
+        {
+            this.SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | 
+                         ControlStyles.OptimizedDoubleBuffer, true);
+            this.Padding = new Padding(10);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // Draw shadow
+            var shadowRect = ClientRectangle;
+            shadowRect.Inflate(1, 1);
+            shadowRect.Offset(0, 2);
+            using (var shadowPath = GetRoundedRectPath(shadowRect, 12))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(15, 0, 0, 0)))
+            {
+                g.FillPath(shadowBrush, shadowPath);
+            }
+
+            // Draw card background
+            using (var path = GetRoundedRectPath(ClientRectangle, 12))
+            using (var brush = new SolidBrush(this.BackColor))
+            {
+                g.FillPath(brush, path);
+            }
+        }
+
+        private GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
+        {
+            var path = new GraphicsPath();
+            rect.Inflate(-1, -1);
+            
+            path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+            path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+            path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+            path.CloseFigure();
+            
+            return path;
+        }
+    }
+
+    /// <summary>
+    /// Modern link label with hover effect
+    /// </summary>
+    public class ModernLinkLabel : LinkLabel
+    {
+        public ModernLinkLabel(string text, Color linkColor)
+        {
+            this.Text = text;
+            this.Font = new Font("Segoe UI", 9);
+            this.LinkColor = linkColor;
+            this.ActiveLinkColor = DarkenColor(linkColor, 30);
+            this.VisitedLinkColor = linkColor;
+            this.LinkBehavior = LinkBehavior.HoverUnderline;
+            this.Cursor = Cursors.Hand;
+        }
+
+        private Color DarkenColor(Color color, int amount)
+        {
+            return Color.FromArgb(
+                Math.Max(0, color.R - amount),
+                Math.Max(0, color.G - amount),
+                Math.Max(0, color.B - amount));
+        }
+    }
 }
+

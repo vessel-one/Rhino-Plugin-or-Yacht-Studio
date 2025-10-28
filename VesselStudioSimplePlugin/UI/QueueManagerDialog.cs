@@ -43,13 +43,14 @@ namespace VesselStudioSimplePlugin.UI
         // T029-T031: Initialize all form components
         private void InitializeComponent()
         {
-            // T029: Form properties
+            // T029: Form properties - RESIZABLE
             this.Text = "Batch Export Queue Manager";
-            this.Size = new Size(600, 500);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.Size = new Size(700, 600);
+            this.MinimumSize = new Size(600, 400);
+            this.FormBorderStyle = FormBorderStyle.Sizable;  // Changed from FixedDialog
             this.StartPosition = FormStartPosition.CenterParent;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            this.MaximizeBox = true;  // Changed from false
+            this.MinimizeBox = true;  // Changed from false
 
             // T030: ImageList for thumbnails (120x90 size)
             _thumbnailImageList = new ImageList
@@ -58,117 +59,132 @@ namespace VesselStudioSimplePlugin.UI
                 ColorDepth = ColorDepth.Depth32Bit
             };
 
-            // T030: ListView with columns
+            // T030: ListView with columns - Docked to fill
             _queueListView = new ListView
             {
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 CheckBoxes = true,
                 FullRowSelect = true,
-                SmallImageList = _thumbnailImageList
+                SmallImageList = _thumbnailImageList,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
             _queueListView.Columns.Add("Thumbnail", 120);
             _queueListView.Columns.Add("Viewport Name", 200);
             _queueListView.Columns.Add("Timestamp", 150);
             this.Controls.Add(_queueListView);
 
-            // T031: Bottom panel for buttons with increased height for progress bar
-            var buttonPanel = new Panel
+            // T031: Bottom panel for buttons with TableLayoutPanel
+            var buttonPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
-                Height = 120,  // Increased from 80 to accommodate progress bar + buttons
-                BackColor = SystemColors.Control,
-                Padding = new Padding(10)  // Add padding around all edges
+                Height = 120,
+                ColumnCount = 1,
+                RowCount = 2,
+                Padding = new Padding(10),
+                BackColor = SystemColors.Control
             };
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 60F));  // Progress area
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));  // Buttons area
             this.Controls.Add(buttonPanel);
 
-            // Add progress bar (hidden by default, shown during export)
+            // Progress area panel
+            var progressPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0)
+            };
+            buttonPanel.Controls.Add(progressPanel, 0, 0);
+
+            // Add progress bar
             _uploadProgressBar = new ProgressBar
             {
-                Size = new Size(560, 20),  // Slightly narrower to account for panel padding
-                Location = new Point(10, 10),
+                Dock = DockStyle.Top,
+                Height = 20,
                 Visible = false,
                 Style = ProgressBarStyle.Continuous,
                 Margin = new Padding(5)
             };
-            buttonPanel.Controls.Add(_uploadProgressBar);
+            progressPanel.Controls.Add(_uploadProgressBar);
 
             // Add progress status label
             _progressStatusLabel = new Label
             {
+                Dock = DockStyle.Bottom,
+                Height = 25,
                 Text = "Uploading...",
-                Size = new Size(300, 20),
-                Location = new Point(10, 35),
                 Visible = false,
                 Font = new Font("Arial", 9, FontStyle.Regular),
                 ForeColor = SystemColors.ControlText,
+                TextAlign = ContentAlignment.MiddleLeft,
                 Margin = new Padding(5)
             };
-            buttonPanel.Controls.Add(_progressStatusLabel);
+            progressPanel.Controls.Add(_progressStatusLabel);
 
-            // T031: Remove Selected button - positioned below progress area
+            // Button area with FlowLayoutPanel
+            var buttonFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(0)
+            };
+            buttonPanel.Controls.Add(buttonFlow, 0, 1);
+
+            // T031: Remove Selected button
             _removeSelectedButton = new Button
             {
                 Text = "Remove Selected",
                 Size = new Size(120, 30),
-                Location = new Point(10, 70),  // Changed from 40 to 70
-                Margin = new Padding(5)
+                Margin = new Padding(0, 5, 5, 5)
             };
             _removeSelectedButton.Click += OnRemoveSelectedClick;
-            buttonPanel.Controls.Add(_removeSelectedButton);
+            buttonFlow.Controls.Add(_removeSelectedButton);
 
             // T031: Clear All button
             _clearAllButton = new Button
             {
                 Text = "Clear All",
                 Size = new Size(100, 30),
-                Location = new Point(140, 70),  // Changed from 40 to 70
-                Margin = new Padding(5)
+                Margin = new Padding(0, 5, 5, 5)
             };
             _clearAllButton.Click += OnClearAllClick;
-            buttonPanel.Controls.Add(_clearAllButton);
+            buttonFlow.Controls.Add(_clearAllButton);
 
-            // T031: Export All button (T059 placeholder)
+            // T031: Export All button
             _exportAllButton = new Button
             {
                 Text = "Export All",
                 Size = new Size(100, 30),
-                Location = new Point(250, 70),  // Changed from 40 to 70
-                Margin = new Padding(5)
+                Margin = new Padding(0, 5, 5, 5)
             };
             _exportAllButton.Click += OnExportAllClick;
-            buttonPanel.Controls.Add(_exportAllButton);
+            buttonFlow.Controls.Add(_exportAllButton);
 
-            // Settings button with tooltip for image format options
+            // Settings button
             _settingsButton = new Button
             {
-                Text = "📸 Format",
-                Size = new Size(80, 30),
-                Location = new Point(360, 70),  // Changed from 40 to 70
-                Margin = new Padding(5)
+                Text = "⚙️ Settings",
+                Size = new Size(90, 30),
+                Margin = new Padding(0, 5, 5, 5)
             };
             _settingsButton.Click += OnSettingsClick;
             
             var tooltip = new ToolTip();
-            tooltip.SetToolTip(_settingsButton,
-                "Image Format Settings\n" +
-                "• PNG: Lossless quality (recommended)\n" +
-                "• JPEG: Configurable quality (1-100)\n" +
-                "• High quality = larger file size");
+            tooltip.SetToolTip(_settingsButton, "Open Settings (API Key & Image Format)");
             
-            buttonPanel.Controls.Add(_settingsButton);
+            buttonFlow.Controls.Add(_settingsButton);
 
             // T031: Close button
             _closeButton = new Button
             {
                 Text = "Close",
                 Size = new Size(80, 30),
-                Location = new Point(450, 70),  // Changed from 40 to 70
                 DialogResult = DialogResult.Cancel,
-                Margin = new Padding(5)
+                Margin = new Padding(0, 5, 5, 5)
             };
             this.CancelButton = _closeButton;
-            buttonPanel.Controls.Add(_closeButton);
+            buttonFlow.Controls.Add(_closeButton);
         }
 
         // T032-T040: Load queue items into ListView
@@ -260,10 +276,13 @@ namespace VesselStudioSimplePlugin.UI
         // Image format settings button handler
         private void OnSettingsClick(object sender, EventArgs e)
         {
-            // Open image format settings dialog
-            using (var dialog = new VesselImageFormatDialog())
+            // Open combined settings dialog (API Key + Image Format)
+            using (var dialog = new VesselStudioSettingsDialog())
             {
-                dialog.ShowDialog();
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    RhinoApp.WriteLine("Settings updated successfully");
+                }
             }
         }
 

@@ -14,7 +14,7 @@ using VesselStudioSimplePlugin.UI;
 namespace VesselStudioSimplePlugin
 {
     /// <summary>
-    /// Dockable panel with toolbar buttons for Vessel Studio - Modern UI Design
+    /// Dockable panel with toolbar buttons for Vessel Studio - Modern WinForms Design
     /// </summary>
 #if DEV
     [System.Runtime.InteropServices.Guid("D5E6F7A8-B9C0-1D2E-3F4A-5B6C7D8E9F0A")] // DEV GUID
@@ -23,17 +23,16 @@ namespace VesselStudioSimplePlugin
 #endif
     public class VesselStudioToolbarPanel : Panel
     {
-        private ModernButton _captureButton;
-        private ModernButton _addToQueueButton;
-        private ModernButton _quickExportBatchButton;
-        private ModernButton _settingsButton;
-        private ModernButton _imageFormatButton;
-        private ModernButton _refreshProjectsButton;
+        private Button _captureButton;
+        private Button _addToQueueButton;
+        private Button _quickExportBatchButton;
+        private Button _settingsButton;
+        private Button _refreshProjectsButton;
         private ComboBox _projectComboBox;
         private Label _statusLabel;
         private Label _projectLabel;
         private Label _batchBadgeLabel;
-        private CardPanel _statusPanel;
+        private Panel _statusPanel;
         private List<VesselProject> _projects;
 
         public VesselStudioToolbarPanel()
@@ -53,195 +52,250 @@ namespace VesselStudioSimplePlugin
 
         private void InitializeComponents()
         {
-            // Modern layout with gradient background
+            // Main panel configuration with auto-scroll
+            this.AutoScroll = true;
             this.Padding = new Padding(15);
             this.BackColor = Color.FromArgb(248, 249, 250);
 
-            int yPos = 15;
-
-            // Title with gradient
 #if DEV
             var titleText = "Vessel Studio DEV";
             var primaryColor = Color.FromArgb(255, 140, 0); // Orange for DEV
-            var secondaryColor = Color.FromArgb(255, 180, 50);
 #else
             var titleText = "Vessel Studio";
             var primaryColor = Color.FromArgb(64, 123, 255); // Modern blue
-            var secondaryColor = Color.FromArgb(100, 149, 237);
 #endif
-            
+
+            // Use TableLayoutPanel for responsive layout
+            var mainLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 13,
+                Padding = new Padding(0),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            this.Controls.Add(mainLayout);
+
+            // Configure rows
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Title + Settings
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80F));  // Status card
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));  // Project label
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));  // Project dropdown
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 55F));  // Capture button
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Add to queue
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));  // Batch badge
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Export batch
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 85F));  // Info card
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));  // Doc link
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));  // About link
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // Spacer
+
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            // Row 0: Title + Settings button
+            var headerPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(0),
+                Margin = new Padding(0, 0, 0, 5)
+            };
+
             var titleLabel = new Label
             {
                 Text = titleText,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = primaryColor,
                 AutoSize = true,
-                Location = new Point(15, yPos)
+                Margin = new Padding(0, 5, 0, 0)
             };
-            this.Controls.Add(titleLabel);
-            yPos += 45;
+            headerPanel.Controls.Add(titleLabel);
 
-            // Status card with modern design
-            _statusPanel = new CardPanel
+            // Settings cog button (top-right)
+            _settingsButton = new Button
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 70),
-                BackColor = Color.White
+                Text = "⚙️",
+                Size = new Size(35, 35),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White,
+                Margin = new Padding(5, 0, 0, 0),
+                Cursor = Cursors.Hand
+            };
+            _settingsButton.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
+            _settingsButton.Click += OnSettingsClick;
+            var settingsTooltip = new ToolTip();
+            settingsTooltip.SetToolTip(_settingsButton, "Settings (API Key & Image Format)");
+            headerPanel.Controls.Add(_settingsButton);
+
+            mainLayout.Controls.Add(headerPanel, 0, 0);
+
+            // Row 1: Status card
+            _statusPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(10),
+                Margin = new Padding(0, 5, 0, 10)
             };
 
             _statusLabel = new Label
             {
                 Text = "Not configured",
-                Location = new Point(15, 15),
-                Size = new Size(220, 40),
-                TextAlign = ContentAlignment.TopLeft,
+                Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 9.5f),
-                ForeColor = Color.FromArgb(60, 60, 60)
+                ForeColor = Color.FromArgb(60, 60, 60),
+                AutoSize = false
             };
             _statusPanel.Controls.Add(_statusLabel);
-            this.Controls.Add(_statusPanel);
-            yPos += 85;
+            mainLayout.Controls.Add(_statusPanel, 0, 1);
 
-            // Settings button with modern style
-            _settingsButton = new ModernButton("⚙️  Set API Key", primaryColor)
-            {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 40)
-            };
-            _settingsButton.Click += OnSettingsClick;
-            this.Controls.Add(_settingsButton);
-            yPos += 50;
-
-            // Image Format Settings button (tooltip for quality options)
-            _imageFormatButton = new ModernButton("🖼️  Image Format", Color.FromArgb(108, 117, 125))
-            {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 35),
-                Font = new Font("Segoe UI", 9f)
-            };
-            _imageFormatButton.Click += OnImageFormatClick;
-            
-            // Add tooltip explaining format options
-            var tooltip = new ToolTip();
-            tooltip.SetToolTip(_imageFormatButton, 
-                "PNG: Lossless quality (recommended)\n" +
-                "JPEG: Compressed (configurable 1-100)\n" +
-                "Click to change image format and quality");
-            
-            this.Controls.Add(_imageFormatButton);
-            yPos += 50;
-
-            // Project section header
+            // Row 2: Project section header
             _projectLabel = new Label
             {
                 Text = "SELECT PROJECT",
-                Location = new Point(15, yPos),
-                Size = new Size(250, 20),
+                Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 8, FontStyle.Bold),
-                ForeColor = Color.FromArgb(120, 120, 120)
+                ForeColor = Color.FromArgb(120, 120, 120),
+                Margin = new Padding(0, 5, 0, 5),
+                AutoSize = false
             };
-            this.Controls.Add(_projectLabel);
-            yPos += 28;
+            mainLayout.Controls.Add(_projectLabel, 0, 2);
 
-            // Modern project dropdown
+            // Row 3: Project dropdown + refresh button
+            var projectPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(0),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+
             _projectComboBox = new ComboBox
             {
-                Location = new Point(15, yPos),
                 Width = 190,
-                Height = 35,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false,
                 Font = new Font("Segoe UI", 9.5f),
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0)
             };
             _projectComboBox.DisplayMember = "Name";
             _projectComboBox.ValueMember = "Id";
             _projectComboBox.SelectedIndexChanged += OnProjectChanged;
-            this.Controls.Add(_projectComboBox);
+            projectPanel.Controls.Add(_projectComboBox);
 
-            // Refresh button with icon
-            _refreshProjectsButton = new ModernButton("🔄", Color.FromArgb(108, 117, 125))
+            _refreshProjectsButton = new Button
             {
-                Location = new Point(210, yPos),
-                Size = new Size(55, 35),
-                IsIconButton = true
+                Text = "🔄",
+                Size = new Size(50, 23),
+                FlatStyle = FlatStyle.Standard,
+                Margin = new Padding(5, 0, 0, 0),
+                Cursor = Cursors.Hand
             };
             _refreshProjectsButton.Click += OnRefreshProjectsClick;
-            this.Controls.Add(_refreshProjectsButton);
-            yPos += 50;
+            projectPanel.Controls.Add(_refreshProjectsButton);
 
-            // Capture button - prominent action
-            _captureButton = new ModernButton("📷  Capture Screenshot", Color.FromArgb(40, 167, 69))
+            mainLayout.Controls.Add(projectPanel, 0, 3);
+
+            // Row 4: Capture button
+            _captureButton = new Button
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 45),
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold)
+                Text = "📷 Capture Screenshot",
+                Dock = DockStyle.Fill,
+                Height = 45,
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Standard,
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                Margin = new Padding(0, 0, 0, 10),
+                Cursor = Cursors.Hand
             };
             _captureButton.Click += OnCaptureClick;
-            this.Controls.Add(_captureButton);
-            yPos += 60;
+            mainLayout.Controls.Add(_captureButton, 0, 4);
 
-            // Add to Batch Queue button (T021)
-            _addToQueueButton = new ModernButton("➕ Add to Batch Queue", Color.FromArgb(108, 117, 125))
+            // Row 5: Add to Queue button
+            _addToQueueButton = new Button
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 40),
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
+                Text = "➕ Add to Batch Queue",
+                Dock = DockStyle.Fill,
+                Height = 40,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Standard,
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                Margin = new Padding(0, 0, 0, 10),
+                Cursor = Cursors.Hand
             };
             _addToQueueButton.Click += OnAddToQueueClick;
-            this.Controls.Add(_addToQueueButton);
-            yPos += 50;
+            mainLayout.Controls.Add(_addToQueueButton, 0, 5);
 
-            // Batch Badge Label (T022-T024) - shows queue count
+            // Row 6: Batch badge
             _batchBadgeLabel = new Label
             {
                 Text = "📦 Batch (0)",
-                Location = new Point(15, yPos),
-                Size = new Size(250, 28),
+                Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(255, 107, 53),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Visible = false  // Hidden until items are queued
+                Visible = false,
+                Margin = new Padding(0, 0, 0, 5),
+                Cursor = Cursors.Hand,
+                AutoSize = false
             };
             _batchBadgeLabel.Click += OnBatchBadgeClick;
-            this.Controls.Add(_batchBadgeLabel);
-            yPos += 38;
+            mainLayout.Controls.Add(_batchBadgeLabel, 0, 6);
 
-            // T053: Quick Export Batch button below badge, initially disabled
-            _quickExportBatchButton = new ModernButton("📤 Quick Export Batch", Color.FromArgb(0, 120, 215))
+            // Row 7: Quick Export Batch button
+            _quickExportBatchButton = new Button
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 40),
+                Text = "📤 Quick Export Batch",
+                Dock = DockStyle.Fill,
+                Height = 40,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Enabled = false  // T054: Initially disabled (no queue items)
+                FlatStyle = FlatStyle.Standard,
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                Enabled = false,
+                Margin = new Padding(0, 0, 0, 10),
+                Cursor = Cursors.Hand
             };
             _quickExportBatchButton.Click += OnQuickExportBatchClick;
-            this.Controls.Add(_quickExportBatchButton);
-            yPos += 50;
-            var infoCard = new CardPanel
+            mainLayout.Controls.Add(_quickExportBatchButton, 0, 7);
+
+            // Row 8: Info card
+            var infoCard = new Panel
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 75),
-                BackColor = Color.FromArgb(240, 248, 255)
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(240, 248, 255),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
             };
 
             var helpLabel = new Label
             {
                 Text = "💡 Quick Tip\nQueue captures then export\nthe batch when ready!",
-                Location = new Point(12, 10),
-                Size = new Size(226, 60),
+                Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 8.5f),
-                ForeColor = Color.FromArgb(80, 80, 80)
+                ForeColor = Color.FromArgb(80, 80, 80),
+                AutoSize = false
             };
             infoCard.Controls.Add(helpLabel);
-            this.Controls.Add(infoCard);
-            yPos += 90;
+            mainLayout.Controls.Add(infoCard, 0, 8);
 
-            // Modern link buttons
-            var docLink = new ModernLinkLabel("📖 Documentation", primaryColor)
+            // Row 9: Documentation link
+            var docLink = new LinkLabel
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 25)
+                Text = "📖 Documentation",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9f),
+                LinkColor = primaryColor,
+                Margin = new Padding(0, 5, 0, 0),
+                AutoSize = false
             };
             docLink.LinkClicked += (s, e) =>
             {
@@ -251,13 +305,17 @@ namespace VesselStudioSimplePlugin
                 }
                 catch { }
             };
-            this.Controls.Add(docLink);
-            yPos += 30;
+            mainLayout.Controls.Add(docLink, 0, 9);
 
-            var aboutLink = new ModernLinkLabel("ℹ️ About Plugin", primaryColor)
+            // Row 10: About link
+            var aboutLink = new LinkLabel
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 25)
+                Text = "ℹ️ About Plugin",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9f),
+                LinkColor = primaryColor,
+                Margin = new Padding(0, 5, 0, 0),
+                AutoSize = false
             };
             aboutLink.LinkClicked += (s, e) =>
             {
@@ -267,29 +325,20 @@ namespace VesselStudioSimplePlugin
                 RhinoApp.RunScript("VesselStudioAbout", false);
 #endif
             };
-            this.Controls.Add(aboutLink);
+            mainLayout.Controls.Add(aboutLink, 0, 10);
         }
 
         private void OnSettingsClick(object sender, EventArgs e)
         {
+            // Open combined settings dialog
 #if DEV
-            RhinoApp.RunScript("DevVesselSetApiKey", false);
+            RhinoApp.RunScript("DevVesselSettings", false);
 #else
-            RhinoApp.RunScript("VesselSetApiKey", false);
+            RhinoApp.RunScript("VesselSettings", false);
 #endif
             UpdateStatus();
-            // Reload projects after API key change
+            // Reload projects after settings change
             LoadProjectsAsync();
-        }
-
-        private void OnImageFormatClick(object sender, EventArgs e)
-        {
-            // Open image format settings dialog
-#if DEV
-            RhinoApp.RunScript("DevVesselImageSettings", false);
-#else
-            RhinoApp.RunScript("VesselImageSettings", false);
-#endif
         }
 
         private void OnProjectChanged(object sender, EventArgs e)

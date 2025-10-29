@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2025-10-29
+
 ### Added
 - **Trial Tier Support**: Users on Pro Trial and Standard Trial plans now have full Rhino plugin access
 - **Trial Status Display**: Status label shows trial tier and days remaining when on active trial

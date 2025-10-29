@@ -8,19 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Toolbar Icon**: Added plugin icon to the left of toolbar title with vertical centering
-
-### Fixed
-- **Label Rendering**: Fixed WinForms pseudo-transparency issues causing text overlap on labels
-- **Button Cutoff**: Increased row heights for Settings and Refresh buttons to prevent bottom cutoff
-- **Label Alignment**: Fixed "Select Project:" label vertical centering to prevent top cutoff
-- **Error Handling**: Invalid/expired API key now properly clears project dropdown and shows error message
-- **Subscription Validation**: Added subscription tier checking with clear error messages for insufficient plans
+- **Trial Tier Support**: Users on Pro Trial and Standard Trial plans now have full Rhino plugin access
+- **Trial Status Display**: Status label shows trial tier and days remaining when on active trial
+- **Trial Expiration Helper**: New `GetDaysUntilExpiration()` method to calculate trial countdown
+- **Enhanced Validation**: API validation now checks `effectiveTier` field to support trial users
 
 ### Changed
-- **Toolbar Title Color**: Changed from orange to blue (matching About dialog) for both DEV and production modes
-- **Error Messages**: Centralized error handling through UpdateStatus() for consistent UI behavior
-- **API Validation**: Now validates API key and subscription before loading projects
+- **Subscription Tier Logic**: Now uses `effectiveTier` (trial OR base tier) instead of just `subscriptionTier`
+- **ValidationResult Model**: Added fields for trial tracking: `SubscriptionTier`, `EffectiveTier`, `TrialTier`, `TrialExpiresAt`, `HasTrialActive`
+- **Error Messages**: Improved error messages to distinguish between free/base tier and expired trial
+
+### Technical
+- **API v1.1 Compatibility**: Fully backward compatible with previous API versions
+- **Fallback Logic**: If server doesn't send new trial fields, falls back to base subscription tier
 
 ## [1.4.0] - 2025-10-28
 

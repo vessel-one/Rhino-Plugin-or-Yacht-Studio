@@ -107,15 +107,27 @@ namespace VesselStudioSimplePlugin
                     
                     var result = JsonConvert.DeserializeObject<dynamic>(json);
                     
-                    // Check subscription tier
+                    // Extract tier information
                     var subscriptionTier = result.user?.subscriptionTier?.ToString()?.ToLower();
+                    var effectiveTier = result.user?.effectiveTier?.ToString()?.ToLower();
+                    var trialTier = result.user?.trialTier?.ToString()?.ToLower();
+                    var hasTrialActive = result.user?.hasTrialActive ?? false;
+                    var trialExpiresAt = result.user?.trialExpiresAt?.ToString();
+                    
+                    // Use effectiveTier for access check (falls back to subscriptionTier if not present)
+                    var activeTier = effectiveTier ?? subscriptionTier;
                     var allowedTiers = new[] { "standard", "pro", "educational" };
-                    var hasValidSubscription = !string.IsNullOrEmpty(subscriptionTier) && 
-                                               Array.Exists(allowedTiers, tier => tier == subscriptionTier);
+                    var hasValidSubscription = !string.IsNullOrEmpty(activeTier) && 
+                                               Array.Exists(allowedTiers, tier => tier == activeTier);
                     
                     if (!hasValidSubscription)
                     {
                         // API key valid but subscription tier insufficient
+                        // Determine user-friendly plan name
+                        var displayPlan = hasTrialActive 
+                            ? $"{trialTier?.ToUpper()} Trial (Expired)" 
+                            : subscriptionTier?.ToUpper() ?? "FREE";
+                        
                         return new ValidationResult
                         {
                             Success = true, // API key is valid
@@ -123,12 +135,20 @@ namespace VesselStudioSimplePlugin
                             UserName = result.user?.displayName?.ToString(),
                             UserEmail = result.user?.email?.ToString(),
                             ErrorMessage = "Subscription upgrade required",
-                            ErrorDetails = $"Your current plan ({subscriptionTier}) does not include Rhino plugin access. Please upgrade to Standard, Pro, or Educational plan.",
+                            ErrorDetails = $"Your current plan ({displayPlan}) does not include Rhino plugin access. Please upgrade to Standard, Pro, or Educational plan.",
+                            
+                            // Include trial fields even in error case
+                            SubscriptionTier = subscriptionTier,
+                            EffectiveTier = effectiveTier ?? subscriptionTier,
+                            TrialTier = trialTier,
+                            TrialExpiresAt = trialExpiresAt,
+                            HasTrialActive = hasTrialActive,
+                            
                             SubscriptionError = new ApiErrorResponse
                             {
                                 Success = false,
                                 Error = "SUBSCRIPTION_INSUFFICIENT",
-                                UserMessage = $"Your {subscriptionTier?.ToUpper()} plan does not include Rhino plugin access.\n\nUpgrade to Standard, Pro, or Educational to use this plugin.",
+                                UserMessage = $"Your {displayPlan} plan does not include Rhino plugin access.\n\nUpgrade to Standard, Pro, or Educational to use this plugin.",
                                 CurrentPlan = subscriptionTier,
                                 RequiredPlans = new[] { "Standard", "Pro", "Educational" },
                                 UpgradeUrl = "https://vesselstudio.io/settings?tab=billing"
@@ -144,7 +164,14 @@ namespace VesselStudioSimplePlugin
                         UserName = result.user?.displayName?.ToString(),
                         UserEmail = result.user?.email?.ToString(),
                         ErrorMessage = null,
-                        ErrorDetails = null
+                        ErrorDetails = null,
+                        
+                        // Include trial tier fields
+                        SubscriptionTier = subscriptionTier,
+                        EffectiveTier = effectiveTier ?? subscriptionTier,
+                        TrialTier = trialTier,
+                        TrialExpiresAt = trialExpiresAt,
+                        HasTrialActive = hasTrialActive
                     };
                 }
                 else
@@ -449,5 +476,12 @@ namespace VesselStudioSimplePlugin
         // Subscription validation
         public bool HasValidSubscription { get; set; }
         public ApiErrorResponse SubscriptionError { get; set; }
+        
+        // Trial tier support (API v1.1)
+        public string SubscriptionTier { get; set; }  // Base tier (free, standard, pro)
+        public string EffectiveTier { get; set; }     // Current active tier (trial OR base)
+        public string TrialTier { get; set; }         // Trial plan if active
+        public string TrialExpiresAt { get; set; }    // ISO timestamp
+        public bool HasTrialActive { get; set; }      // Quick boolean check
     }
 }

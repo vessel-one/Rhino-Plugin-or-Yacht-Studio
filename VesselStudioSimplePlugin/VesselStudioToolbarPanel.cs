@@ -745,6 +745,7 @@ namespace VesselStudioSimplePlugin
                 }
                 else if (!string.IsNullOrEmpty(settings.LastProjectName))
                 {
+                    // Check if user is on trial (could enhance this by calling ValidateApiKeyAsync)
                     _statusLabel.Text = $"✓ Ready - {settings.LastProjectName}";
                     _statusLabel.ForeColor = Color.FromArgb(76, 175, 80);
                     _captureButton.Enabled = true;
@@ -955,6 +956,25 @@ namespace VesselStudioSimplePlugin
                 (int)(c1.R + (c2.R - c1.R) * ratio),
                 (int)(c1.G + (c2.G - c1.G) * ratio),
                 (int)(c1.B + (c2.B - c1.B) * ratio));
+        }
+
+        /// <summary>
+        /// Calculate days until trial expires
+        /// </summary>
+        private int GetDaysUntilExpiration(string trialExpiresAt)
+        {
+            if (string.IsNullOrEmpty(trialExpiresAt)) return 0;
+            
+            try
+            {
+                var expiresAt = DateTime.Parse(trialExpiresAt);
+                var daysRemaining = (expiresAt - DateTime.UtcNow).Days;
+                return Math.Max(0, daysRemaining);
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         protected override void Dispose(bool disposing)

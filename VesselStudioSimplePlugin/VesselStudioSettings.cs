@@ -19,6 +19,12 @@ namespace VesselStudioSimplePlugin
         public DateTime LastSubscriptionCheck { get; set; }
         public string SubscriptionErrorMessage { get; set; }
         public string UpgradeUrl { get; set; }
+        
+        // Trial tier info (API v1.1)
+        public bool HasTrialActive { get; set; }
+        public string TrialTier { get; set; }
+        public string TrialExpiresAt { get; set; }
+        public DateTime LastTrialWarningShown { get; set; } // Track when we last showed warning (show once per day)
 
         // Image format settings (Phase 5 Group 3 Enhancement)
         /// <summary>

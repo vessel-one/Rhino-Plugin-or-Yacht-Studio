@@ -570,9 +570,14 @@ namespace VesselStudioSimplePlugin
                     settings.HasValidSubscription = false;
                     settings.LastProjectId = null;
                     settings.LastProjectName = null;
+                    // Store the error message for display in UpdateStatus
+                    settings.SubscriptionErrorMessage = validation.ErrorDetails 
+                        ?? $"Upgrade your plan at: {validation.SubscriptionError?.UpgradeUrl ?? "https://vesselstudio.io/settings?tab=billing"}";
+                    settings.UpgradeUrl = validation.SubscriptionError?.UpgradeUrl ?? "https://vesselstudio.io/settings?tab=billing";
                     settings.Save();
                     
-                    RhinoApp.WriteLine("❌ Invalid or expired subscription");
+                    RhinoApp.WriteLine($"❌ {validation.ErrorMessage}");
+                    RhinoApp.WriteLine($"   {validation.ErrorDetails}");
                     
                     // Use UpdateStatus to show subscription error
                     if (InvokeRequired)
@@ -594,6 +599,44 @@ namespace VesselStudioSimplePlugin
                 
                 // Update subscription status
                 settings.HasValidSubscription = true;
+                
+                // Store trial info if available (API v1.1)
+                if (validation.HasTrialActive)
+                {
+                    settings.HasTrialActive = true;
+                    settings.TrialTier = validation.TrialTier;
+                    settings.TrialExpiresAt = validation.TrialExpiresAt;
+                    settings.LastSubscriptionCheck = DateTime.Now;
+                    settings.Save();
+                    
+                    // Show warning dialog if trial expiring within 3 days (only once per day)
+                    var daysRemaining = GetDaysUntilExpiration(validation.TrialExpiresAt);
+                    if (daysRemaining <= 3 && (DateTime.Now - settings.LastTrialWarningShown).TotalHours > 24)
+                    {
+                        if (InvokeRequired)
+                        {
+                            Invoke(new Action(() => {
+                                ShowTrialExpiringWarning(daysRemaining, settings.UpgradeUrl);
+                                settings.LastTrialWarningShown = DateTime.Now;
+                                settings.Save();
+                            }));
+                        }
+                        else
+                        {
+                            ShowTrialExpiringWarning(daysRemaining, settings.UpgradeUrl);
+                            settings.LastTrialWarningShown = DateTime.Now;
+                            settings.Save();
+                        }
+                    }
+                }
+                else
+                {
+                    // Not on trial, clear trial fields
+                    settings.HasTrialActive = false;
+                    settings.TrialTier = null;
+                    settings.TrialExpiresAt = null;
+                }
+                
                 settings.Save();
                 
                 _projects = await apiClient.GetProjectsAsync();
@@ -737,7 +780,15 @@ namespace VesselStudioSimplePlugin
                 }
                 else if (!settings.HasValidSubscription)
                 {
-                    _statusLabel.Text = "❌ Invalid or expired subscription";
+                    // Show specific error message if available
+                    if (!string.IsNullOrEmpty(settings.SubscriptionErrorMessage))
+                    {
+                        _statusLabel.Text = $"❌ {settings.SubscriptionErrorMessage}";
+                    }
+                    else
+                    {
+                        _statusLabel.Text = "❌ Invalid or expired subscription";
+                    }
                     _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
                     _captureButton.Enabled = false;
                     _projectComboBox.Enabled = false;
@@ -763,6 +814,113 @@ namespace VesselStudioSimplePlugin
             {
                 _statusLabel.Text = "⚠ Error reading status";
                 _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
+            }
+        }
+
+        /// <summary>
+        /// Calculate days until trial expires
+        /// </summary>
+        private int GetDaysUntilExpiration(string trialExpiresAt)
+        {
+            if (string.IsNullOrEmpty(trialExpiresAt)) return 0;
+            
+            try
+            {
+                var expiresAt = DateTime.Parse(trialExpiresAt);
+                var daysRemaining = (expiresAt - DateTime.UtcNow).Days;
+                return Math.Max(0, daysRemaining);
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Show warning dialog when trial is expiring soon
+        /// </summary>
+        private void ShowTrialExpiringWarning(int daysRemaining, string upgradeUrl)
+        {
+            try
+            {
+                using (var dialog = new Form())
+                {
+                    dialog.Text = "Trial Expiring Soon";
+                    dialog.Size = new Size(450, 280);
+                    dialog.StartPosition = FormStartPosition.CenterScreen;
+                    dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                    dialog.MaximizeBox = false;
+                    dialog.MinimizeBox = false;
+                    dialog.BackColor = Color.White;
+                    
+                    var warningIcon = new Label
+                    {
+                        Text = "⚠️",
+                        Font = new Font("Segoe UI", 40),
+                        Location = new Point(20, 15),
+                        Size = new Size(80, 80),
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    dialog.Controls.Add(warningIcon);
+                    
+                    var titleLabel = new Label
+                    {
+                        Text = "Your Trial is Expiring Soon",
+                        Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                        Location = new Point(110, 20),
+                        Size = new Size(310, 30),
+                        AutoSize = false
+                    };
+                    dialog.Controls.Add(titleLabel);
+                    
+                    var messageLabel = new Label
+                    {
+                        Text = $"You have {daysRemaining} day{(daysRemaining != 1 ? "s" : "")} remaining on your Rhino plugin trial.\n\n" +
+                               "Upgrade now to avoid interruption to your workflow.",
+                        Font = new Font("Segoe UI", 10),
+                        Location = new Point(110, 60),
+                        Size = new Size(310, 80),
+                        AutoSize = false
+                    };
+                    dialog.Controls.Add(messageLabel);
+                    
+                    var upgradeButton = new Button
+                    {
+                        Text = "Upgrade Now",
+                        Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                        Location = new Point(250, 160),
+                        Size = new Size(150, 40),
+                        BackColor = Color.FromArgb(64, 123, 255),
+                        ForeColor = Color.White,
+                        FlatStyle = FlatStyle.Flat,
+                        Cursor = Cursors.Hand,
+                        DialogResult = DialogResult.OK
+                    };
+                    upgradeButton.Click += (s, e) => {
+                        try
+                        {
+                            System.Diagnostics.Process.Start(upgradeUrl ?? "https://vesselstudio.io/settings?tab=billing");
+                        }
+                        catch { }
+                    };
+                    dialog.Controls.Add(upgradeButton);
+                    
+                    var dismissButton = new Button
+                    {
+                        Text = "Dismiss",
+                        Location = new Point(110, 160),
+                        Size = new Size(130, 40),
+                        FlatStyle = FlatStyle.Standard,
+                        DialogResult = DialogResult.Cancel
+                    };
+                    dialog.Controls.Add(dismissButton);
+                    
+                    dialog.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                RhinoApp.WriteLine($"Error showing trial warning: {ex.Message}");
             }
         }
 
@@ -956,25 +1114,6 @@ namespace VesselStudioSimplePlugin
                 (int)(c1.R + (c2.R - c1.R) * ratio),
                 (int)(c1.G + (c2.G - c1.G) * ratio),
                 (int)(c1.B + (c2.B - c1.B) * ratio));
-        }
-
-        /// <summary>
-        /// Calculate days until trial expires
-        /// </summary>
-        private int GetDaysUntilExpiration(string trialExpiresAt)
-        {
-            if (string.IsNullOrEmpty(trialExpiresAt)) return 0;
-            
-            try
-            {
-                var expiresAt = DateTime.Parse(trialExpiresAt);
-                var daysRemaining = (expiresAt - DateTime.UtcNow).Days;
-                return Math.Max(0, daysRemaining);
-            }
-            catch
-            {
-                return 0;
-            }
         }
 
         protected override void Dispose(bool disposing)

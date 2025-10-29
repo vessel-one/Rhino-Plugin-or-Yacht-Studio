@@ -240,11 +240,13 @@ if ($rhpFiles) {
     Write-Host ""
     Write-Host "     Setup Commands:" -ForegroundColor Cyan
     Write-Host "     - VesselSetApiKey            (Configure API key)" -ForegroundColor Gray
+    Write-Host "     - VesselSettings             (Unified settings dialog)" -ForegroundColor Gray
     Write-Host "     - VesselStudioStatus         (Check connection)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "     Capture Commands:" -ForegroundColor Cyan
     Write-Host "     - VesselCapture              (Capture with project selection)" -ForegroundColor Gray
-    Write-Host "     - VesselQuickCapture         (Quick capture to last project)" -ForegroundColor Gray
+    Write-Host "     - VesselAddToQueue           (Add to batch queue)" -ForegroundColor Gray
+    Write-Host "     - VesselQueueManagerCommand  (Manage queue)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "     Help:" -ForegroundColor Cyan
     Write-Host "     - VesselStudioHelp           (Open online documentation)" -ForegroundColor Gray

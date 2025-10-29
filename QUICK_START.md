@@ -36,14 +36,14 @@ After reloading, test:
 Command: DevVesselStudioStatus
 Expected: Responds instantly (no freeze) ✓
 
-Command: DevVesselImageSettings
-Expected: Image Format dialog opens (NOT API key dialog) ✓
+Command: DevVesselSettings
+Expected: Tabbed dialog opens with "API Key" and "Image Format" tabs ✓
 
-Toolbar: Look for "🖼️ Image Format" button
-Expected: Between "Set API Key" and Project dropdown ✓
+Command: DevVesselSetApiKey
+Expected: Same unified settings dialog opens ✓
 
-Queue Manager: Open and look for "📸 Format" button
-Expected: Between "Export All" and "Close" buttons ✓
+Toolbar: Settings button
+Expected: Opens unified settings dialog with both tabs ✓
 ```
 
 ---
@@ -54,8 +54,8 @@ Expected: Between "Export All" and "Close" buttons ✓
 ```
 ✓ DevVesselCapture              Single viewport upload
 ✓ DevVesselAddToQueue           Batch queue (primary now)
-✓ DevVesselSetApiKey            Configure API key
-✓ DevVesselImageSettings        Image format & quality (FIXED)
+✓ DevVesselSetApiKey            Configure API key (opens unified settings)
+✓ DevVesselSettings             Unified settings dialog (API Key + Image Format)
 ✓ DevVesselQueueManagerCommand  Manage queue
 ✓ DevVesselSendBatchCommand     CLI batch upload
 ✓ DevVesselStudioStatus         Check status (FIXED)
@@ -64,13 +64,14 @@ Expected: Between "Export All" and "Close" buttons ✓
 ✓ DevVesselStudioHelp           Help/docs
 ```
 
-### If You Still See These (Refresh Didn't Work)
+### Deprecated Commands (Removed)
 ```
-✗ DevVesselQuickCapture         OLD - use DevVesselCapture
-✗ DevVesselStudioDebugIcons     OLD - ignore or close Rhino
+✗ DevVesselQuickCapture         REMOVED - use DevVesselCapture or DevVesselAddToQueue
+✗ DevVesselStudioDebugIcons     REMOVED - no longer needed
+✗ DevVesselImageSettings        REMOVED - use DevVesselSettings instead
 ```
 
-**Fix**: Close and reopen Rhino to fully refresh.
+**Note**: If you still see old commands after reloading, close and reopen Rhino completely.
 
 ---
 
@@ -82,7 +83,7 @@ Expected: Between "Export All" and "Close" buttons ✓
 ### Toolbar Buttons Not Visible
 → Run: `DevVesselStudioShowToolbar` in command line
 
-### DevVesselImageSettings Opens API Key Dialog
+### Settings Dialog Missing Image Format Tab
 → Close Rhino and reopen (old plugin version cached in memory)
 
 ### DevVesselStudioStatus Freezes/Hangs
@@ -95,10 +96,10 @@ Expected: Between "Export All" and "Close" buttons ✓
 | Before | After | Status |
 |--------|-------|--------|
 | DevVesselStudioStatus freezes | Responds instantly | ✅ FIXED |
-| DevVesselImageSettings → API dialog | → Format dialog | ✅ FIXED |
-| No image format access | Toolbar button + queue button | ✅ ADDED |
+| Multiple settings dialogs | Unified tabbed settings | ✅ FIXED |
+| No image format access | Settings tab + toolbar button | ✅ ADDED |
 | No quality control | PNG/JPEG 1-100 slider | ✅ ADDED |
-| No tooltips | Helpful tooltips on buttons | ✅ ADDED |
+| Deprecated commands | Cleaned up & removed | ✅ FIXED |
 
 ---
 

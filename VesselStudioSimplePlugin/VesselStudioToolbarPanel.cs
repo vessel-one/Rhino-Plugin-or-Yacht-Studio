@@ -860,50 +860,85 @@ namespace VesselStudioSimplePlugin
                 using (var dialog = new Form())
                 {
                     dialog.Text = "Trial Expiring Soon";
-                    dialog.Size = new Size(450, 280);
+                    dialog.Size = new Size(500, 320);
                     dialog.StartPosition = FormStartPosition.CenterScreen;
                     dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                     dialog.MaximizeBox = false;
                     dialog.MinimizeBox = false;
                     dialog.BackColor = Color.White;
+                    dialog.Padding = new Padding(0);
+                    
+                    // Header panel with warning icon and title
+                    var headerPanel = new Panel
+                    {
+                        BackColor = Color.FromArgb(255, 245, 230), // Light orange background
+                        Dock = DockStyle.Top,
+                        Height = 100,
+                        Padding = new Padding(20, 15, 20, 15)
+                    };
+                    dialog.Controls.Add(headerPanel);
                     
                     var warningIcon = new Label
                     {
                         Text = "⚠️",
-                        Font = new Font("Segoe UI", 40),
-                        Location = new Point(20, 15),
-                        Size = new Size(80, 80),
-                        TextAlign = ContentAlignment.MiddleCenter
+                        Font = new Font("Segoe UI", 48),
+                        Location = new Point(20, 12),
+                        Size = new Size(70, 70),
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        AutoSize = false
                     };
-                    dialog.Controls.Add(warningIcon);
+                    headerPanel.Controls.Add(warningIcon);
                     
                     var titleLabel = new Label
                     {
                         Text = "Your Trial is Expiring Soon",
-                        Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                        Location = new Point(110, 20),
-                        Size = new Size(310, 30),
+                        Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                        Location = new Point(100, 15),
+                        Size = new Size(380, 30),
+                        TextAlign = ContentAlignment.MiddleLeft,
                         AutoSize = false
                     };
-                    dialog.Controls.Add(titleLabel);
+                    headerPanel.Controls.Add(titleLabel);
+                    
+                    // Content panel with message
+                    var contentPanel = new Panel
+                    {
+                        BackColor = Color.White,
+                        Dock = DockStyle.Fill,
+                        Padding = new Padding(25, 20, 25, 80)
+                    };
+                    dialog.Controls.Add(contentPanel);
                     
                     var messageLabel = new Label
                     {
                         Text = $"You have {daysRemaining} day{(daysRemaining != 1 ? "s" : "")} remaining on your Rhino plugin trial.\n\n" +
-                               "Upgrade now to avoid interruption to your workflow.",
+                               "Upgrade now to continue using this plugin and avoid losing your work.",
                         Font = new Font("Segoe UI", 10),
-                        Location = new Point(110, 60),
-                        Size = new Size(310, 80),
+                        Location = new Point(25, 20),
+                        Size = new Size(450, 100),
+                        TextAlign = ContentAlignment.TopLeft,
                         AutoSize = false
                     };
-                    dialog.Controls.Add(messageLabel);
+                    messageLabel.AutoSize = true;
+                    messageLabel.MaximumSize = new Size(450, 0);
+                    contentPanel.Controls.Add(messageLabel);
+                    
+                    // Button panel at bottom
+                    var buttonPanel = new Panel
+                    {
+                        BackColor = Color.FromArgb(248, 249, 250),
+                        Dock = DockStyle.Bottom,
+                        Height = 70,
+                        Padding = new Padding(20, 15, 20, 15)
+                    };
+                    dialog.Controls.Add(buttonPanel);
                     
                     var upgradeButton = new Button
                     {
                         Text = "Upgrade Now",
                         Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                        Location = new Point(250, 160),
-                        Size = new Size(150, 40),
+                        Location = new Point(270, 15),
+                        Size = new Size(145, 40),
                         BackColor = Color.FromArgb(64, 123, 255),
                         ForeColor = Color.White,
                         FlatStyle = FlatStyle.Flat,
@@ -917,17 +952,19 @@ namespace VesselStudioSimplePlugin
                         }
                         catch { }
                     };
-                    dialog.Controls.Add(upgradeButton);
+                    upgradeButton.FlatAppearance.BorderSize = 0;
+                    buttonPanel.Controls.Add(upgradeButton);
                     
                     var dismissButton = new Button
                     {
                         Text = "Dismiss",
-                        Location = new Point(110, 160),
-                        Size = new Size(130, 40),
+                        Font = new Font("Segoe UI", 10),
+                        Location = new Point(115, 15),
+                        Size = new Size(145, 40),
                         FlatStyle = FlatStyle.Standard,
                         DialogResult = DialogResult.Cancel
                     };
-                    dialog.Controls.Add(dismissButton);
+                    buttonPanel.Controls.Add(dismissButton);
                     
                     dialog.ShowDialog();
                 }

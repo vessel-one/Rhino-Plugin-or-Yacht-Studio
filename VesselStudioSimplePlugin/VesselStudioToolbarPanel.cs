@@ -364,6 +364,13 @@ namespace VesselStudioSimplePlugin
                 // Set MaximumSize width to panel width minus padding (30px total)
                 // Height = 0 means unlimited vertical growth (allows text wrapping)
                 _statusLabel.MaximumSize = new Size(this.Width - 30, 0);
+                
+                // Force label to recalculate its size
+                _statusLabel.AutoSize = false;
+                _statusLabel.AutoSize = true;
+                
+                // Force parent layout refresh
+                this.PerformLayout();
             }
         }
 
@@ -824,19 +831,13 @@ namespace VesselStudioSimplePlugin
                 }
                 else if (!settings.HasValidSubscription)
                 {
-                    // Show specific error message if available
-                    if (!string.IsNullOrEmpty(settings.SubscriptionErrorMessage))
-                    {
-                        _statusLabel.Text = $"❌ {settings.SubscriptionErrorMessage}";
-                    }
-                    else
-                    {
-                        _statusLabel.Text = "❌ Invalid or expired subscription";
-                    }
+                    // Simple, short error message
+                    _statusLabel.Text = "❌ Upgrade your subscription";
                     _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
                     _captureButton.Enabled = false;
                     _projectComboBox.Enabled = false;
-                    _refreshProjectsButton.Enabled = false;
+                    // Keep refresh button enabled so user can retry after upgrading
+                    _refreshProjectsButton.Enabled = true;
                 }
                 else if (!string.IsNullOrEmpty(settings.LastProjectName))
                 {

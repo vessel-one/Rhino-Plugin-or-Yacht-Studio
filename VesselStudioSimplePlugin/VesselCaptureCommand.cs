@@ -83,6 +83,21 @@ namespace VesselStudioSimplePlugin
                     else
                     {
                         RhinoApp.WriteLine($"❌ Upload failed: {result.Message}");
+                        
+                        // Check if API key became invalid during upload
+                        if (result.Message.Contains("Invalid or expired API key"))
+                        {
+                            // Clear invalid API key and update settings
+                            settings.ApiKey = null;
+                            settings.LastProjectId = null;
+                            settings.LastProjectName = null;
+                            settings.HasValidSubscription = false;
+                            settings.SubscriptionErrorMessage = "API key is no longer valid. Please reconfigure.";
+                            settings.Save();
+                            
+                            RhinoApp.WriteLine($"⚠️  API key is no longer valid. Cleared from settings.");
+                            RhinoApp.WriteLine($"📝 Please run 'VesselSetApiKey' to reconfigure.");
+                        }
                     }
                 }
                 catch (Exception ex)

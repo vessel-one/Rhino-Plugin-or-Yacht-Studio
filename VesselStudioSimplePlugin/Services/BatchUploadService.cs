@@ -217,6 +217,22 @@ namespace VesselStudioSimplePlugin.Services
                             result.FailedCount++;
                             result.Errors.Add((filename, uploadResult.Message ?? "Unknown error"));
                             RhinoApp.WriteLine($"[BatchUpload] ✗ Failed: {filename} - {uploadResult.Message}");
+                            
+                            // Detect auth and subscription errors
+                            if (uploadResult.Message.Contains("Invalid or expired API key"))
+                            {
+                                result.ApiKeyInvalid = true;
+                                RhinoApp.WriteLine("[BatchUpload] ⚠️  API key is no longer valid");
+                                break; // Stop uploading remaining items
+                            }
+                            else if (uploadResult.Message.Contains("Insufficient tier") || 
+                                     uploadResult.Message.Contains("subscription") ||
+                                     uploadResult.Message.Contains("upgrade"))
+                            {
+                                result.SubscriptionInvalid = true;
+                                RhinoApp.WriteLine("[BatchUpload] ⚠️  Subscription/tier error detected");
+                                break; // Stop uploading remaining items
+                            }
                         }
                     }
                     catch (Exception ex)

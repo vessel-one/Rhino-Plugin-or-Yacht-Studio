@@ -85,6 +85,33 @@ namespace VesselStudioSimplePlugin
                         RhinoApp.WriteLine($"   {result.UploadedCount} capture{(result.UploadedCount == 1 ? "" : "s")} uploaded successfully");
                         RhinoApp.WriteLine($"   Duration: {result.TotalDurationMs}ms");
                     }
+                    else if (result.ApiKeyInvalid)
+                    {
+                        // API key became invalid during upload - clear it
+                        settings.ApiKey = null;
+                        settings.LastProjectId = null;
+                        settings.LastProjectName = null;
+                        settings.HasValidSubscription = false;
+                        settings.SubscriptionErrorMessage = "API key is no longer valid.";
+                        settings.Save();
+                        
+                        RhinoApp.WriteLine($"❌ API key is no longer valid");
+                        RhinoApp.WriteLine($"   {result.UploadedCount} capture{(result.UploadedCount == 1 ? "" : "s")} were uploaded before error");
+                        RhinoApp.WriteLine($"   Please run 'VesselSetApiKey' to reconfigure");
+                        RhinoApp.WriteLine($"   Queue preserved for retry after reconfiguration");
+                    }
+                    else if (result.SubscriptionInvalid)
+                    {
+                        // Subscription/tier error - don't delete key, just show error
+                        settings.HasValidSubscription = false;
+                        settings.SubscriptionErrorMessage = "Your plan does not include Rhino plugin access. Please upgrade.";
+                        settings.Save();
+                        
+                        RhinoApp.WriteLine($"❌ Subscription upgrade required");
+                        RhinoApp.WriteLine($"   {result.UploadedCount} capture{(result.UploadedCount == 1 ? "" : "s")} were uploaded before error");
+                        RhinoApp.WriteLine($"   Upgrade your plan at: https://vesselstudio.io/settings?tab=billing");
+                        RhinoApp.WriteLine($"   Queue preserved for retry after upgrade");
+                    }
                     else if (result.IsPartialSuccess)
                     {
                         RhinoApp.WriteLine($"⚠ Batch upload incomplete");

@@ -13,6 +13,12 @@ namespace VesselStudioSimplePlugin
     {
         public VesselStudioAboutDialog()
         {
+            // Enable double buffering to prevent rendering artifacts
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | 
+                         ControlStyles.AllPaintingInWmPaint | 
+                         ControlStyles.UserPaint, true);
+            this.UpdateStyles();
+            
             InitializeComponent();
         }
 
@@ -36,12 +42,12 @@ namespace VesselStudioSimplePlugin
             const int padding = 20;
             int yPos = 0;
 
-            // Logo/Header - simple text on blue background, no bounding box
+            // Logo/Header - simple text on blue background, properly layered
             var headerPanel = new Panel
             {
                 Location = new Point(0, yPos),
                 Width = contentWidth + (padding * 2),
-                Height = 85,
+                Height = 100,
                 BackColor = Color.FromArgb(37, 99, 235) // Vessel Studio blue
             };
             Controls.Add(headerPanel);
@@ -49,26 +55,35 @@ namespace VesselStudioSimplePlugin
             var titleLabel = new Label
             {
                 Text = "Vessel Studio",
-                Location = new Point(padding, 15),
+                Location = new Point(padding, 20),
                 Width = contentWidth,
-                AutoSize = true,
+                Height = 35,
+                AutoSize = false,
                 Font = new Font("Segoe UI", 20f, FontStyle.Bold),
                 ForeColor = Color.White,
-                BackColor = Color.Transparent
+                BackColor = Color.FromArgb(37, 99, 235), // Match parent, not transparent
+                UseMnemonic = false,
+                TextAlign = ContentAlignment.MiddleLeft // Ensure left alignment
             };
             headerPanel.Controls.Add(titleLabel);
+            titleLabel.BringToFront();
 
             var subtitleLabel = new Label
             {
                 Text = "Rhino Plugin",
-                Location = new Point(padding, 58),
+                Location = new Point(padding, 60),
                 Width = contentWidth,
-                AutoSize = true,
+                Height = 25,
+                AutoSize = false,
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(219, 234, 254),
-                BackColor = Color.Transparent
+                BackColor = Color.FromArgb(37, 99, 235), // Match parent, not transparent
+                UseMnemonic = false,
+                TextAlign = ContentAlignment.MiddleLeft // Ensure left alignment
             };
             headerPanel.Controls.Add(subtitleLabel);
+            subtitleLabel.BringToFront();
+            
             yPos += headerPanel.Height + padding;
 
             // Version info

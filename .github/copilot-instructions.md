@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-21
 ## Active Technologies
 - C# (.NET Framework 4.8 or .NET 6+) + RhinoCommon SDK, Eto.Forms (cross-platform UI), System.Net.Http (001-rhino-viewport-sync)
 - PowerShell 5.1+ + Yak CLI (Rhino Package Manager), YAML (manifest format), McNeel Package Server API (002-rhino-package-manager)
+- C# .NET Framework 4.8 (Rhino 7/8 compatibility) + RhinoCommon SDK 8.x, System.Windows.Forms (UI), System.Drawing (image handling), Newtonsoft.Json (API communication) (003-queued-batch-capture)
+- In-memory queue (session-only, cleared on plugin unload) (003-queued-batch-capture)
 
 ## Project Structure
 ```
@@ -63,6 +65,7 @@ update-changelog.ps1          # Git analysis
 - PowerShell: Use approved verbs (Get-, New-, Set-), PascalCase for functions
 
 ## Recent Changes
+- 003-queued-batch-capture: Added C# .NET Framework 4.8 (Rhino 7/8 compatibility) + RhinoCommon SDK 8.x, System.Windows.Forms (UI), System.Drawing (image handling), Newtonsoft.Json (API communication)
 - 002-rhino-package-manager: Added PowerShell 5.1+ scripting, Yak CLI integration, YAML manifest handling, McNeel Package Server distribution
 - 001-rhino-viewport-sync: Added C# (.NET Framework 4.8 or .NET 6+) + RhinoCommon SDK, Eto.Forms (cross-platform UI), System.Net.Http
 

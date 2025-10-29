@@ -7,11 +7,14 @@ using System.Windows.Forms;
 using Rhino;
 using Rhino.Commands;
 using Rhino.UI;
+using VesselStudioSimplePlugin.Models;
+using VesselStudioSimplePlugin.Services;
+using VesselStudioSimplePlugin.UI;
 
 namespace VesselStudioSimplePlugin
 {
     /// <summary>
-    /// Dockable panel with toolbar buttons for Vessel Studio - Modern UI Design
+    /// Dockable panel with toolbar buttons for Vessel Studio - Modern WinForms Design
     /// </summary>
 #if DEV
     [System.Runtime.InteropServices.Guid("D5E6F7A8-B9C0-1D2E-3F4A-5B6C7D8E9F0A")] // DEV GUID
@@ -20,158 +23,305 @@ namespace VesselStudioSimplePlugin
 #endif
     public class VesselStudioToolbarPanel : Panel
     {
-        private ModernButton _captureButton;
-        private ModernButton _settingsButton;
-        private ModernButton _refreshProjectsButton;
+        private Button _captureButton;
+        private Button _addToQueueButton;
+        private Button _quickExportBatchButton;
+        private Button _settingsButton;
+        private Button _refreshProjectsButton;
         private ComboBox _projectComboBox;
         private Label _statusLabel;
         private Label _projectLabel;
-        private CardPanel _statusPanel;
+        private Label _batchBadgeLabel;
         private List<VesselProject> _projects;
 
         public VesselStudioToolbarPanel()
         {
+            // Enable double buffering to prevent flicker and overlapping artifacts
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | 
+                         ControlStyles.AllPaintingInWmPaint | 
+                         ControlStyles.UserPaint, true);
+            this.UpdateStyles();
+            
             InitializeComponents();
             UpdateStatus();
             LoadProjectsAsync();
+
+            // T022-T024: Subscribe to queue events for badge updates
+            CaptureQueueService.Current.ItemAdded += OnQueueItemAdded;
+            CaptureQueueService.Current.ItemRemoved += OnQueueItemRemoved;
+            CaptureQueueService.Current.QueueCleared += OnQueueCleared;
+
+            // Update badge on initialization
+            UpdateBatchBadge();
         }
 
         private void InitializeComponents()
         {
-            // Modern layout with gradient background
+            // Main panel configuration with auto-scroll
+            this.AutoScroll = true;
             this.Padding = new Padding(15);
             this.BackColor = Color.FromArgb(248, 249, 250);
 
-            int yPos = 15;
-
-            // Title with gradient
 #if DEV
             var titleText = "Vessel Studio DEV";
-            var primaryColor = Color.FromArgb(255, 140, 0); // Orange for DEV
-            var secondaryColor = Color.FromArgb(255, 180, 50);
 #else
             var titleText = "Vessel Studio";
-            var primaryColor = Color.FromArgb(64, 123, 255); // Modern blue
-            var secondaryColor = Color.FromArgb(100, 149, 237);
 #endif
-            
+            var primaryColor = Color.FromArgb(64, 123, 255); // Blue matching About dialog
+
+            // Use TableLayoutPanel for responsive layout
+            var mainLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 13,
+                Padding = new Padding(0),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            this.Controls.Add(mainLayout);
+
+            // Configure rows
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Title
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));  // Settings button
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));  // Refresh button
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));  // Project label
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));  // Project dropdown
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));  // Status message (projects loaded/errors)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 55F));  // Capture button
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Add to queue
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));  // Batch badge
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Export batch
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 85F));  // Info card
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));  // Doc link
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));  // About link
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // Spacer
+
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            // Row 0: Title with icon
+            var titlePanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 0, 0, 5),
+                BackColor = Color.FromArgb(248, 249, 250)
+            };
+
+            var titleIcon = new PictureBox
+            {
+                Image = VesselStudioIcons.GetToolbarBitmap(32),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Width = 32,
+                Height = 32,
+                Location = new Point(0, 9) // Center vertically in 50px row
+            };
+            titlePanel.Controls.Add(titleIcon);
+
             var titleLabel = new Label
             {
                 Text = titleText,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = primaryColor,
                 AutoSize = true,
-                Location = new Point(15, yPos)
+                Location = new Point(40, 12), // 32px icon + 8px spacing, better vertical centering
+                BackColor = Color.Transparent
             };
-            this.Controls.Add(titleLabel);
-            yPos += 45;
+            titlePanel.Controls.Add(titleLabel);
+            titleLabel.BringToFront();
 
-            // Status card with modern design
-            _statusPanel = new CardPanel
+            mainLayout.Controls.Add(titlePanel, 0, 0);
+
+            // Row 1: Settings button (aligned right)
+            var settingsPanel = new Panel
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 70),
-                BackColor = Color.White
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 0, 0, 5)
             };
 
-            _statusLabel = new Label
+            _settingsButton = new Button
             {
-                Text = "Not configured",
-                Location = new Point(15, 15),
-                Size = new Size(220, 40),
-                TextAlign = ContentAlignment.TopLeft,
+                Text = "⚙ Settings",
+                Width = 100,
+                Height = 32,
+                FlatStyle = FlatStyle.Standard,
                 Font = new Font("Segoe UI", 9.5f),
-                ForeColor = Color.FromArgb(60, 60, 60)
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            _statusPanel.Controls.Add(_statusLabel);
-            this.Controls.Add(_statusPanel);
-            yPos += 85;
-
-            // Settings button with modern style
-            _settingsButton = new ModernButton("⚙️  Set API Key", primaryColor)
-            {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 40)
-            };
+            _settingsButton.Location = new Point(settingsPanel.Width - _settingsButton.Width, 0);
             _settingsButton.Click += OnSettingsClick;
-            this.Controls.Add(_settingsButton);
-            yPos += 50;
+            settingsPanel.Resize += (s, e) => {
+                _settingsButton.Location = new Point(settingsPanel.Width - _settingsButton.Width, 0);
+            };
+            var settingsTooltip = new ToolTip();
+            settingsTooltip.SetToolTip(_settingsButton, "API Key & Image Format Settings");
+            settingsPanel.Controls.Add(_settingsButton);
+            mainLayout.Controls.Add(settingsPanel, 0, 1);
 
-            // Project section header
+            // Row 2: Refresh button (aligned right)
+            var refreshPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+
+            _refreshProjectsButton = new Button
+            {
+                Text = "🔄 Refresh Projects",
+                Width = 150,
+                Height = 32,
+                FlatStyle = FlatStyle.Standard,
+                Font = new Font("Segoe UI", 9.5f),
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _refreshProjectsButton.Location = new Point(refreshPanel.Width - _refreshProjectsButton.Width, 0);
+            _refreshProjectsButton.Click += OnRefreshProjectsClick;
+            refreshPanel.Resize += (s, e) => {
+                _refreshProjectsButton.Location = new Point(refreshPanel.Width - _refreshProjectsButton.Width, 0);
+            };
+            var refreshTooltip = new ToolTip();
+            refreshTooltip.SetToolTip(_refreshProjectsButton, "Reload project list from server");
+            refreshPanel.Controls.Add(_refreshProjectsButton);
+            mainLayout.Controls.Add(refreshPanel, 0, 2);
+
+            // Row 3: Project section header
             _projectLabel = new Label
             {
-                Text = "SELECT PROJECT",
-                Location = new Point(15, yPos),
-                Size = new Size(250, 20),
-                Font = new Font("Segoe UI", 8, FontStyle.Bold),
-                ForeColor = Color.FromArgb(120, 120, 120)
+                Text = "Select Project:",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                Margin = new Padding(0, 10, 0, 5),
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = Color.FromArgb(248, 249, 250) // Solid background matching parent
             };
-            this.Controls.Add(_projectLabel);
-            yPos += 28;
+            mainLayout.Controls.Add(_projectLabel, 0, 3);
+            _projectLabel.BringToFront();
 
-            // Modern project dropdown
+            // Row 4: Project dropdown (full width)
             _projectComboBox = new ComboBox
             {
-                Location = new Point(15, yPos),
-                Width = 190,
-                Height = 35,
+                Dock = DockStyle.Fill,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false,
                 Font = new Font("Segoe UI", 9.5f),
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 0, 0, 5),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             _projectComboBox.DisplayMember = "Name";
             _projectComboBox.ValueMember = "Id";
             _projectComboBox.SelectedIndexChanged += OnProjectChanged;
-            this.Controls.Add(_projectComboBox);
+            mainLayout.Controls.Add(_projectComboBox, 0, 4);
 
-            // Refresh button with icon
-            _refreshProjectsButton = new ModernButton("🔄", Color.FromArgb(108, 117, 125))
+            // Row 5: Status label (projects loaded, errors, etc.)
+            // AutoSize = true allows label to grow vertically when text wraps
+            _statusLabel = new Label
             {
-                Location = new Point(210, yPos),
-                Size = new Size(55, 35),
-                IsIconButton = true
+                Text = "Not configured",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Margin = new Padding(0, 0, 0, 10),
+                AutoSize = true, // Allow vertical growth for text wrapping
+                MaximumSize = new Size(0, 0), // Will be set dynamically on resize
+                TextAlign = ContentAlignment.TopLeft,
+                BackColor = Color.FromArgb(248, 249, 250), // Solid background matching parent
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
-            _refreshProjectsButton.Click += OnRefreshProjectsClick;
-            this.Controls.Add(_refreshProjectsButton);
-            yPos += 50;
+            mainLayout.Controls.Add(_statusLabel, 0, 5);
+            _statusLabel.BringToFront();
 
-            // Capture button - prominent action
-            _captureButton = new ModernButton("📷  Capture Screenshot", Color.FromArgb(40, 167, 69))
+            // Row 6: Capture button
+            _captureButton = new Button
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 45),
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold)
+                Text = "📷 Capture Screenshot",
+                Dock = DockStyle.Fill,
+                Height = 45,
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Standard,
+                Margin = new Padding(0, 0, 0, 10),
+                Cursor = Cursors.Hand
             };
             _captureButton.Click += OnCaptureClick;
-            this.Controls.Add(_captureButton);
-            yPos += 60;
+            mainLayout.Controls.Add(_captureButton, 0, 6);
 
-            // Info card
-            var infoCard = new CardPanel
+            // Row 7: Add to Queue button
+            _addToQueueButton = new Button
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 75),
-                BackColor = Color.FromArgb(240, 248, 255)
+                Text = "➕ Add to Batch Queue",
+                Dock = DockStyle.Fill,
+                Height = 40,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Standard,
+                Margin = new Padding(0, 0, 0, 10),
+                Cursor = Cursors.Hand
+            };
+            _addToQueueButton.Click += OnAddToQueueClick;
+            mainLayout.Controls.Add(_addToQueueButton, 0, 7);
+
+            // Row 8: Batch badge
+            _batchBadgeLabel = new Label
+            {
+                Text = "📦 Batch (0)",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(255, 107, 53),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Visible = false,
+                Margin = new Padding(0, 0, 0, 5),
+                Cursor = Cursors.Hand,
+                AutoSize = false
+            };
+            _batchBadgeLabel.Click += OnBatchBadgeClick;
+            mainLayout.Controls.Add(_batchBadgeLabel, 0, 8);
+
+            // Row 9: Quick Export Batch button
+            _quickExportBatchButton = new Button
+            {
+                Text = "📤 Quick Export Batch",
+                Dock = DockStyle.Fill,
+                Height = 40,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Standard,
+                Enabled = false,
+                Margin = new Padding(0, 0, 0, 10),
+                Cursor = Cursors.Hand
+            };
+            _quickExportBatchButton.Click += OnQuickExportBatchClick;
+            mainLayout.Controls.Add(_quickExportBatchButton, 0, 9);
+
+            // Row 10: Info card
+            var infoCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(240, 248, 255),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
             };
 
             var helpLabel = new Label
             {
-                Text = "💡 Quick Tip\nUploads happen in background.\nYou can continue working!",
-                Location = new Point(12, 10),
-                Size = new Size(226, 60),
+                Text = "💡 Quick Tip\nQueue captures then export\nthe batch when ready!",
+                Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 8.5f),
-                ForeColor = Color.FromArgb(80, 80, 80)
+                ForeColor = Color.FromArgb(80, 80, 80),
+                AutoSize = false
             };
             infoCard.Controls.Add(helpLabel);
-            this.Controls.Add(infoCard);
-            yPos += 90;
+            mainLayout.Controls.Add(infoCard, 0, 10);
 
-            // Modern link buttons
-            var docLink = new ModernLinkLabel("📖 Documentation", primaryColor)
+            // Row 11: Documentation link
+            var docLink = new LinkLabel
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 25)
+                Text = "📖 Documentation",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9f),
+                LinkColor = primaryColor,
+                Margin = new Padding(0, 5, 0, 0),
+                AutoSize = false
             };
             docLink.LinkClicked += (s, e) =>
             {
@@ -181,13 +331,17 @@ namespace VesselStudioSimplePlugin
                 }
                 catch { }
             };
-            this.Controls.Add(docLink);
-            yPos += 30;
+            mainLayout.Controls.Add(docLink, 0, 11);
 
-            var aboutLink = new ModernLinkLabel("ℹ️ About Plugin", primaryColor)
+            // Row 12: About link
+            var aboutLink = new LinkLabel
             {
-                Location = new Point(15, yPos),
-                Size = new Size(250, 25)
+                Text = "ℹ️ About Plugin",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9f),
+                LinkColor = primaryColor,
+                Margin = new Padding(0, 5, 0, 0),
+                AutoSize = false
             };
             aboutLink.LinkClicked += (s, e) =>
             {
@@ -197,19 +351,42 @@ namespace VesselStudioSimplePlugin
                 RhinoApp.RunScript("VesselStudioAbout", false);
 #endif
             };
-            this.Controls.Add(aboutLink);
+            mainLayout.Controls.Add(aboutLink, 0, 12);
+            
+            // Handle resize to update status label MaximumSize for text wrapping
+            this.Resize += (s, e) => UpdateStatusLabelWidth();
+        }
+        
+        private void UpdateStatusLabelWidth()
+        {
+            if (_statusLabel != null && this.Width > 0)
+            {
+                // Set MaximumSize width to panel width minus padding (30px total)
+                // Height = 0 means unlimited vertical growth (allows text wrapping)
+                _statusLabel.MaximumSize = new Size(this.Width - 30, 0);
+                
+                // Force label to recalculate its size
+                _statusLabel.AutoSize = false;
+                _statusLabel.AutoSize = true;
+                
+                // Force parent layout refresh
+                this.PerformLayout();
+            }
         }
 
         private void OnSettingsClick(object sender, EventArgs e)
         {
-#if DEV
-            RhinoApp.RunScript("DevVesselSetApiKey", false);
-#else
-            RhinoApp.RunScript("VesselSetApiKey", false);
-#endif
-            UpdateStatus();
-            // Reload projects after API key change
-            LoadProjectsAsync();
+            // Open combined settings dialog directly (same as Batch Manager)
+            using (var dialog = new VesselStudioSettingsDialog())
+            {
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    RhinoApp.WriteLine("✅ Settings saved successfully");
+                    UpdateStatus();
+                    // Reload projects after settings change
+                    LoadProjectsAsync();
+                }
+            }
         }
 
         private void OnProjectChanged(object sender, EventArgs e)
@@ -258,6 +435,105 @@ namespace VesselStudioSimplePlugin
 #endif
         }
 
+        /// <summary>
+        /// T021: Handle "Add to Batch Queue" button click
+        /// Executes VesselAddToQueueCommand to capture and queue the viewport
+        /// </summary>
+        private void OnAddToQueueClick(object sender, EventArgs e)
+        {
+#if DEV
+            RhinoApp.RunScript("DevVesselAddToQueue", false);
+#else
+            RhinoApp.RunScript("VesselAddToQueue", false);
+#endif
+        }
+
+        /// <summary>
+        /// T024: Handle batch badge click (placeholder for queue manager dialog in Phase 4)
+        /// Currently just shows queue count and guidance
+        /// </summary>
+        private void OnBatchBadgeClick(object sender, EventArgs e)
+        {
+            var count = CaptureQueueService.Current.ItemCount;
+            RhinoApp.WriteLine($"📦 Batch queue: {count} item{(count == 1 ? "" : "s")}");
+            RhinoApp.WriteLine("💡 Phase 4: Queue Manager dialog coming soon to view and manage captures");
+        }
+
+        /// <summary>
+        /// T040: Handle "Quick Export Batch" button click
+        /// Opens the QueueManagerDialog for reviewing and managing queued captures
+        /// (Phase 4 implementation: Dialog management, Phase 5: Upload functionality)
+        /// </summary>
+        private void OnQuickExportBatchClick(object sender, EventArgs e)
+        {
+            // T040: Open Queue Manager Dialog
+            using (var dialog = new QueueManagerDialog())
+            {
+                dialog.ShowDialog();
+            }
+            
+            // Refresh UI after dialog closes
+            UpdateBatchBadge();
+        }
+
+        /// <summary>
+        /// T022: Handle ItemAdded event from CaptureQueueService
+        /// Updates batch badge to show new queue count
+        /// </summary>
+        private void OnQueueItemAdded(object sender, ItemAddedEventArgs e)
+        {
+            UpdateBatchBadge();
+        }
+
+        /// <summary>
+        /// T023: Handle ItemRemoved event from CaptureQueueService
+        /// Updates batch badge to show new queue count
+        /// </summary>
+        private void OnQueueItemRemoved(object sender, ItemRemovedEventArgs e)
+        {
+            UpdateBatchBadge();
+        }
+
+        /// <summary>
+        /// T023: Handle QueueCleared event from CaptureQueueService
+        /// Updates batch badge to reflect empty queue
+        /// </summary>
+        private void OnQueueCleared(object sender, EventArgs e)
+        {
+            UpdateBatchBadge();
+        }
+
+        /// <summary>
+        /// T022-T024: Update batch badge label visibility and text based on queue count
+        /// Visible when count > 0, hidden when count = 0
+        /// T054: Also enable/disable Quick Export button based on queue count
+        /// </summary>
+        private void UpdateBatchBadge()
+        {
+            // Thread-safe UI update
+            if (InvokeRequired)
+            {
+                Invoke(new Action(UpdateBatchBadge));
+                return;
+            }
+
+            var count = CaptureQueueService.Current.ItemCount;
+
+            if (count > 0)
+            {
+                _batchBadgeLabel.Text = $"📦 Batch ({count})";
+                _batchBadgeLabel.Visible = true;
+                // T054: Enable Quick Export button when queue has items
+                _quickExportBatchButton.Enabled = true;
+            }
+            else
+            {
+                _batchBadgeLabel.Visible = false;
+                // T054: Disable Quick Export button when queue is empty (FR-012)
+                _quickExportBatchButton.Enabled = false;
+            }
+        }
+
         private async void LoadProjectsAsync()
         {
             var settings = VesselStudioSettings.Load();
@@ -271,50 +547,159 @@ namespace VesselStudioSimplePlugin
 
             try
             {
-                _projectLabel.Text = "⏳ Loading projects...";
+                _projectLabel.Text = "⏳ Loading...";
                 _projectLabel.ForeColor = Color.Gray;
                 _refreshProjectsButton.Enabled = false;
                 
                 var apiClient = new VesselStudioApiClient();
                 apiClient.SetApiKey(settings.ApiKey);
                 
-                _projects = await apiClient.GetProjectsAsync();
-
-                // If we got 0 projects, could mean authentication failed or user deleted
-                if (_projects == null || _projects.Count == 0)
+                // First validate the API key and subscription
+                var validation = await apiClient.ValidateApiKeyAsync();
+                
+                if (!validation.Success)
                 {
-                    // Validate API key to check if it's still valid
-                    var validation = await apiClient.ValidateApiKeyAsync();
+                    // API key is invalid or authentication failed - delete it
+                    // This includes: authentication errors, network failures, timeouts, etc.
+                    settings.ApiKey = null;
+                    settings.LastProjectId = null;
+                    settings.LastProjectName = null;
+                    settings.HasValidSubscription = false;
+                    settings.SubscriptionErrorMessage = null;
+                    settings.Save();
                     
-                    if (!validation.Success)
+                    RhinoApp.WriteLine($"❌ {validation.ErrorMessage}");
+                    
+                    // Use UpdateStatus to show appropriate error
+                    if (InvokeRequired)
                     {
-                        // Authentication failed - clear settings
-                        settings.ApiKey = null;
-                        settings.LastProjectId = null;
-                        settings.LastProjectName = null;
-                        settings.HasValidSubscription = false;
-                        settings.Save();
-                        
-                        RhinoApp.WriteLine($"❌ Authentication failed: {validation.ErrorMessage}");
-                        RhinoApp.WriteLine("Please reconfigure your API key in the settings.");
-                        
-                        // Update UI to disconnected state
+                        Invoke(new Action(() => {
+                            _projectComboBox.DataSource = null;
+                            _projectComboBox.Enabled = false;
+                            UpdateStatus();
+                        }));
+                    }
+                    else
+                    {
+                        _projectComboBox.DataSource = null;
+                        _projectComboBox.Enabled = false;
+                        UpdateStatus();
+                    }
+                    return;
+                }
+                
+                // Check subscription validity
+                if (!validation.HasValidSubscription)
+                {
+                    // API key is valid, but subscription tier is insufficient
+                    // Keep the API key in memory - only store that subscription is invalid
+                    settings.HasValidSubscription = false;
+                    settings.LastProjectId = null;
+                    settings.LastProjectName = null;
+                    
+                    // Store the error message and upgrade URL for display
+                    settings.SubscriptionErrorMessage = validation.ErrorDetails 
+                        ?? "Your plan does not include Rhino plugin access.";
+                    settings.UpgradeUrl = validation.SubscriptionError?.UpgradeUrl ?? "https://vesselstudio.io/settings?tab=billing";
+                    
+                    // Store trial info if available
+                    if (validation.HasTrialActive)
+                    {
+                        settings.HasTrialActive = true;
+                        settings.TrialTier = validation.TrialTier;
+                        settings.TrialExpiresAt = validation.TrialExpiresAt;
+                    }
+                    
+                    settings.Save();
+                    
+                    RhinoApp.WriteLine($"❌ {validation.ErrorMessage}");
+                    RhinoApp.WriteLine($"   {validation.ErrorDetails}");
+                    
+                    // Use UpdateStatus to show subscription error
+                    if (InvokeRequired)
+                    {
+                        Invoke(new Action(() => {
+                            _projectComboBox.DataSource = null;
+                            _projectComboBox.Enabled = false;
+                            UpdateStatus();
+                        }));
+                    }
+                    else
+                    {
+                        _projectComboBox.DataSource = null;
+                        _projectComboBox.Enabled = false;
+                        UpdateStatus();
+                    }
+                    return;
+                }
+                
+                // Update subscription status
+                settings.HasValidSubscription = true;
+                
+                // Store trial info if available (API v1.1)
+                if (validation.HasTrialActive)
+                {
+                    settings.HasTrialActive = true;
+                    settings.TrialTier = validation.TrialTier;
+                    settings.TrialExpiresAt = validation.TrialExpiresAt;
+                    settings.LastSubscriptionCheck = DateTime.Now;
+                    settings.Save();
+                    
+                    // Show warning dialog if trial expiring within 3 days (only once per day)
+                    var daysRemaining = GetDaysUntilExpiration(validation.TrialExpiresAt);
+                    var timeSinceLastWarning = DateTime.Now - settings.LastTrialWarningShown;
+                    
+                    // Show if: expiring soon AND (never shown before OR > 24h since last shown)
+                    if (daysRemaining <= 3 && (settings.LastTrialWarningShown == DateTime.MinValue || timeSinceLastWarning.TotalHours >= 24))
+                    {
                         if (InvokeRequired)
                         {
                             Invoke(new Action(() => {
-                                _projectComboBox.DataSource = null;
-                                _projectComboBox.Enabled = false;
-                                UpdateStatus();
+                                ShowTrialExpiringWarning(daysRemaining, settings.UpgradeUrl);
+                                settings.LastTrialWarningShown = DateTime.Now;
+                                settings.Save();
                             }));
                         }
                         else
                         {
+                            ShowTrialExpiringWarning(daysRemaining, settings.UpgradeUrl);
+                            settings.LastTrialWarningShown = DateTime.Now;
+                            settings.Save();
+                        }
+                    }
+                }
+                else
+                {
+                    // Not on trial, clear trial fields
+                    settings.HasTrialActive = false;
+                    settings.TrialTier = null;
+                    settings.TrialExpiresAt = null;
+                }
+                
+                settings.Save();
+                
+                _projects = await apiClient.GetProjectsAsync();
+
+                // If we got 0 projects but API key is valid
+                if (_projects == null || _projects.Count == 0)
+                {
+                    if (InvokeRequired)
+                    {
+                        Invoke(new Action(() => {
                             _projectComboBox.DataSource = null;
                             _projectComboBox.Enabled = false;
-                            UpdateStatus();
-                        }
-                        return;
+                            _statusLabel.Text = "⚠ No projects found";
+                            _statusLabel.ForeColor = Color.FromArgb(255, 140, 0);
+                        }));
                     }
+                    else
+                    {
+                        _projectComboBox.DataSource = null;
+                        _projectComboBox.Enabled = false;
+                        _statusLabel.Text = "⚠ No projects found";
+                        _statusLabel.ForeColor = Color.FromArgb(255, 140, 0);
+                    }
+                    return;
                 }
 
                 if (InvokeRequired)
@@ -328,13 +713,44 @@ namespace VesselStudioSimplePlugin
             }
             catch (Exception ex)
             {
-                _projectLabel.Text = "❌ Error loading projects";
-                _projectLabel.ForeColor = Color.Red;
+                // Check if it's a true authentication error (401 Unauthorized)
+                // Don't delete key for 403 Forbidden (subscription tier) errors
+                if (ex.Message.Contains("Invalid or expired API key") || ex.Message.Contains("401 Unauthorized"))
+                {
+                    settings.ApiKey = null;
+                    settings.LastProjectId = null;
+                    settings.LastProjectName = null;
+                    settings.HasValidSubscription = false;
+                    settings.Save();
+                    
+                    _projectComboBox.DataSource = null;
+                    _projectComboBox.Enabled = false;
+                    UpdateStatus();
+                }
+                else if (ex.Message.Contains("403 Forbidden"))
+                {
+                    // 403 means subscription tier is insufficient, NOT that key is invalid
+                    settings.HasValidSubscription = false;
+                    settings.SubscriptionErrorMessage = "Your plan does not include Rhino plugin access.";
+                    settings.Save();
+                    
+                    _projectComboBox.DataSource = null;
+                    _projectComboBox.Enabled = false;
+                    UpdateStatus();
+                }
+                else
+                {
+                    _statusLabel.Text = $"⚠ Error loading projects: {ex.Message}";
+                    _statusLabel.ForeColor = Color.Red;
+                }
+                
                 RhinoApp.WriteLine($"Error loading projects: {ex.Message}");
             }
             finally
             {
                 _refreshProjectsButton.Enabled = true;
+                _projectLabel.Text = "Select Project:";
+                _projectLabel.ForeColor = Color.FromArgb(60, 60, 60);
             }
         }
 
@@ -344,8 +760,8 @@ namespace VesselStudioSimplePlugin
             
             if (_projects == null || _projects.Count == 0)
             {
-                _projectLabel.Text = "❌ No projects found";
-                _projectLabel.ForeColor = Color.Red;
+                _statusLabel.Text = "⚠ No projects found";
+                _statusLabel.ForeColor = Color.FromArgb(255, 140, 0);
                 _projectComboBox.Enabled = false;
                 _projectComboBox.DataSource = null;
                 RhinoApp.WriteLine("DEBUG: No projects to populate");
@@ -390,8 +806,8 @@ namespace VesselStudioSimplePlugin
                 }
             }
 
-            _projectLabel.Text = $"✓ {_projects.Count} project(s) loaded";
-            _projectLabel.ForeColor = Color.FromArgb(76, 175, 80);
+            _statusLabel.Text = $"✓ {_projects.Count} project(s) loaded";
+            _statusLabel.ForeColor = Color.FromArgb(76, 175, 80);
             
             // Re-enable event handler
             _projectComboBox.SelectedIndexChanged += OnProjectChanged;
@@ -407,7 +823,7 @@ namespace VesselStudioSimplePlugin
                 
                 if (string.IsNullOrEmpty(settings?.ApiKey))
                 {
-                    _statusLabel.Text = "❌ Not configured\nSet your API key to get started";
+                    _statusLabel.Text = "⚠ API key not configured";
                     _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
                     _captureButton.Enabled = false;
                     _projectComboBox.Enabled = false;
@@ -415,32 +831,181 @@ namespace VesselStudioSimplePlugin
                 }
                 else if (!settings.HasValidSubscription)
                 {
-                    // API key exists but subscription is invalid or auth failed
-                    _statusLabel.Text = "❌ Authentication failed\nReconfigure your API key";
+                    // Simple, short error message
+                    _statusLabel.Text = "❌ Upgrade your subscription";
                     _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
                     _captureButton.Enabled = false;
                     _projectComboBox.Enabled = false;
-                    _refreshProjectsButton.Enabled = false;
+                    // Keep refresh button enabled so user can retry after upgrading
+                    _refreshProjectsButton.Enabled = true;
                 }
                 else if (!string.IsNullOrEmpty(settings.LastProjectName))
                 {
-                    _statusLabel.Text = $"✓ Connected\nProject: {settings.LastProjectName}";
+                    // Check if user is on trial (could enhance this by calling ValidateApiKeyAsync)
+                    _statusLabel.Text = $"✓ Ready - {settings.LastProjectName}";
                     _statusLabel.ForeColor = Color.FromArgb(76, 175, 80);
                     _captureButton.Enabled = true;
                     _refreshProjectsButton.Enabled = true;
                 }
                 else
                 {
-                    _statusLabel.Text = "✓ API key configured\nSelect a project to continue";
-                    _statusLabel.ForeColor = Color.FromArgb(70, 130, 180);
+                    _statusLabel.Text = "⚠ Select a project to continue";
+                    _statusLabel.ForeColor = Color.FromArgb(255, 140, 0);
                     _captureButton.Enabled = false;
                     _refreshProjectsButton.Enabled = true;
                 }
+                
+                // Update label width for text wrapping
+                UpdateStatusLabelWidth();
             }
             catch
             {
-                _statusLabel.Text = "❌ Error reading status";
+                _statusLabel.Text = "⚠ Error reading status";
                 _statusLabel.ForeColor = Color.FromArgb(200, 50, 50);
+            }
+        }
+
+        /// <summary>
+        /// Calculate days until trial expires
+        /// </summary>
+        private int GetDaysUntilExpiration(string trialExpiresAt)
+        {
+            if (string.IsNullOrEmpty(trialExpiresAt)) return 0;
+            
+            try
+            {
+                var expiresAt = DateTime.Parse(trialExpiresAt);
+                var daysRemaining = (expiresAt - DateTime.UtcNow).Days;
+                return Math.Max(0, daysRemaining);
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Show warning dialog when trial is expiring soon
+        /// </summary>
+        private void ShowTrialExpiringWarning(int daysRemaining, string upgradeUrl)
+        {
+            try
+            {
+                using (var dialog = new Form())
+                {
+                    dialog.Text = "Trial Expiring Soon";
+                    dialog.Size = new Size(500, 320);
+                    dialog.StartPosition = FormStartPosition.CenterScreen;
+                    dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                    dialog.MaximizeBox = false;
+                    dialog.MinimizeBox = false;
+                    dialog.BackColor = Color.White;
+                    dialog.Padding = new Padding(0);
+                    
+                    // Header panel with warning icon and title
+                    var headerPanel = new Panel
+                    {
+                        BackColor = Color.FromArgb(255, 245, 230), // Light orange background
+                        Dock = DockStyle.Top,
+                        Height = 100,
+                        Padding = new Padding(20, 15, 20, 15)
+                    };
+                    dialog.Controls.Add(headerPanel);
+                    
+                    var warningIcon = new Label
+                    {
+                        Text = "⚠️",
+                        Font = new Font("Segoe UI", 48),
+                        Location = new Point(20, 12),
+                        Size = new Size(70, 70),
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        AutoSize = false
+                    };
+                    headerPanel.Controls.Add(warningIcon);
+                    
+                    var titleLabel = new Label
+                    {
+                        Text = "Your Trial is Expiring Soon",
+                        Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                        Location = new Point(100, 15),
+                        Size = new Size(380, 30),
+                        TextAlign = ContentAlignment.MiddleLeft,
+                        AutoSize = false
+                    };
+                    headerPanel.Controls.Add(titleLabel);
+                    
+                    // Content panel with message
+                    var contentPanel = new Panel
+                    {
+                        BackColor = Color.White,
+                        Dock = DockStyle.Fill,
+                        Padding = new Padding(25, 20, 25, 80)
+                    };
+                    dialog.Controls.Add(contentPanel);
+                    
+                    var messageLabel = new Label
+                    {
+                        Text = $"You have {daysRemaining} day{(daysRemaining != 1 ? "s" : "")} remaining on your Rhino plugin trial.\n\n" +
+                               "Upgrade now to continue using this plugin and avoid losing your work.",
+                        Font = new Font("Segoe UI", 10),
+                        Location = new Point(25, 20),
+                        Size = new Size(450, 100),
+                        TextAlign = ContentAlignment.TopLeft,
+                        AutoSize = false
+                    };
+                    messageLabel.AutoSize = true;
+                    messageLabel.MaximumSize = new Size(450, 0);
+                    contentPanel.Controls.Add(messageLabel);
+                    
+                    // Button panel at bottom
+                    var buttonPanel = new Panel
+                    {
+                        BackColor = Color.FromArgb(248, 249, 250),
+                        Dock = DockStyle.Bottom,
+                        Height = 70,
+                        Padding = new Padding(20, 15, 20, 15)
+                    };
+                    dialog.Controls.Add(buttonPanel);
+                    
+                    var upgradeButton = new Button
+                    {
+                        Text = "Upgrade Now",
+                        Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                        Location = new Point(270, 15),
+                        Size = new Size(145, 40),
+                        BackColor = Color.FromArgb(64, 123, 255),
+                        ForeColor = Color.White,
+                        FlatStyle = FlatStyle.Flat,
+                        Cursor = Cursors.Hand,
+                        DialogResult = DialogResult.OK
+                    };
+                    upgradeButton.Click += (s, e) => {
+                        try
+                        {
+                            System.Diagnostics.Process.Start(upgradeUrl ?? "https://vesselstudio.io/settings?tab=billing");
+                        }
+                        catch { }
+                    };
+                    upgradeButton.FlatAppearance.BorderSize = 0;
+                    buttonPanel.Controls.Add(upgradeButton);
+                    
+                    var dismissButton = new Button
+                    {
+                        Text = "Dismiss",
+                        Font = new Font("Segoe UI", 10),
+                        Location = new Point(115, 15),
+                        Size = new Size(145, 40),
+                        FlatStyle = FlatStyle.Standard,
+                        DialogResult = DialogResult.Cancel
+                    };
+                    buttonPanel.Controls.Add(dismissButton);
+                    
+                    dialog.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                RhinoApp.WriteLine($"Error showing trial warning: {ex.Message}");
             }
         }
 
@@ -458,12 +1023,14 @@ namespace VesselStudioSimplePlugin
             if (disposing)
             {
                 _captureButton?.Dispose();
+                _addToQueueButton?.Dispose();
+                _quickExportBatchButton?.Dispose();
                 _settingsButton?.Dispose();
                 _refreshProjectsButton?.Dispose();
                 _projectComboBox?.Dispose();
                 _projectLabel?.Dispose();
                 _statusLabel?.Dispose();
-                _statusPanel?.Dispose();
+                _batchBadgeLabel?.Dispose();
             }
             base.Dispose(disposing);
         }

@@ -2,11 +2,14 @@ using System;
 using System.Windows.Forms;
 using Rhino;
 using Rhino.Commands;
+using VesselStudioSimplePlugin.UI;
 
 namespace VesselStudioSimplePlugin
 {
     /// <summary>
-    /// Command to set/update the Vessel Studio API key
+    /// DEPRECATED: Command to set/update the Vessel Studio API key
+    /// Now redirects to VesselStudioSettingsDialog (combined settings)
+    /// Use DevVesselSettings / VesselSettings instead
     /// </summary>
     [System.Runtime.InteropServices.Guid("C2D3E4F5-A6B7-8C9D-0E1F-2A3B4C5D6E7F")]
     public class VesselStudioSetApiKeyCommand : Command
@@ -26,22 +29,19 @@ namespace VesselStudioSimplePlugin
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            // Load current settings
-            var settings = VesselStudioSettings.Load();
-            
-            // Show settings dialog
-            using (var dialog = new VesselStudioSettingsDialog(settings.ApiKey))
+            // Redirect to combined settings dialog
+            using (var dialog = new VesselStudioSettingsDialog())
             {
                 var result = dialog.ShowDialog();
                 
                 if (result == DialogResult.OK)
                 {
-                    RhinoApp.WriteLine("✅ Vessel Studio API key configured successfully");
+                    RhinoApp.WriteLine("✅ Settings saved successfully");
                     return Result.Success;
                 }
                 else
                 {
-                    RhinoApp.WriteLine("API key configuration cancelled");
+                    RhinoApp.WriteLine("Settings cancelled");
                     return Result.Cancel;
                 }
             }

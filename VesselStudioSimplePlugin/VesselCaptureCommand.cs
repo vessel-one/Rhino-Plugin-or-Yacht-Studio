@@ -83,6 +83,21 @@ namespace VesselStudioSimplePlugin
                     else
                     {
                         RhinoApp.WriteLine($"❌ Upload failed: {result.Message}");
+                        
+                        // Check if API key became invalid during upload
+                        if (result.Message.Contains("Invalid or expired API key"))
+                        {
+                            // Clear invalid API key and update settings
+                            settings.ApiKey = null;
+                            settings.LastProjectId = null;
+                            settings.LastProjectName = null;
+                            settings.HasValidSubscription = false;
+                            settings.SubscriptionErrorMessage = "API key is no longer valid. Please reconfigure.";
+                            settings.Save();
+                            
+                            RhinoApp.WriteLine($"⚠️  API key is no longer valid. Cleared from settings.");
+                            RhinoApp.WriteLine($"📝 Please run 'VesselSetApiKey' to reconfigure.");
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -105,126 +120,6 @@ namespace VesselStudioSimplePlugin
                 }
 
                 // Capture viewport as bitmap (fast operation)
-                var bitmap = view.CaptureToBitmap(new Size(1920, 1080));
-                
-                // Convert to byte array
-                byte[] imageBytes;
-                using (var ms = new MemoryStream())
-                {
-                    bitmap.Save(ms, ImageFormat.Png);
-                    imageBytes = ms.ToArray();
-                }
-
-                // Gather metadata
-                var metadata = new Dictionary<string, object>
-                {
-                    { "width", 1920 },
-                    { "height", 1080 },
-                    { "viewportName", view.MainViewport.Name },
-                    { "displayMode", view.MainViewport.DisplayMode.EnglishName },
-                    { "rhinoVersion", RhinoApp.Version.ToString() },
-                    { "captureTime", DateTime.UtcNow.ToString("o") }
-                };
-
-                return (imageBytes, metadata);
-            }
-            catch (Exception ex)
-            {
-                RhinoApp.WriteLine($"❌ Capture error: {ex.Message}");
-                return (null, null);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Quick capture command for rapid-fire captures
-    /// </summary>
-    public class VesselQuickCaptureCommand : Command
-    {
-#if DEV
-        public override string EnglishName => "DevVesselQuickCapture";
-#else
-        public override string EnglishName => "VesselQuickCapture";
-#endif
-
-        protected override Result RunCommand(RhinoDoc doc, RunMode mode)
-        {
-            var settings = VesselStudioSettings.Load();
-            
-            if (string.IsNullOrEmpty(settings.ApiKey))
-            {
-                RhinoApp.WriteLine("❌ API key not set. Run VesselSetApiKey first.");
-                return Result.Failure;
-            }
-
-            if (string.IsNullOrEmpty(settings.LastProjectId))
-            {
-                RhinoApp.WriteLine("❌ No project selected. Run VesselCapture first to choose a project.");
-                return Result.Failure;
-            }
-
-            var apiClient = new VesselStudioApiClient();
-            apiClient.SetApiKey(settings.ApiKey);
-            
-            RhinoApp.WriteLine($"📸 Quick capturing to {settings.LastProjectName}...");
-
-            // Capture viewport (fast operation)
-            var captureData = CaptureViewportForQuickCapture(doc);
-            
-            if (captureData.imageBytes == null)
-            {
-                RhinoApp.WriteLine("❌ No active viewport or capture failed");
-                return Result.Failure;
-            }
-
-            // Auto-generate name with timestamp
-            var imageName = $"Quick Capture {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-            
-            // Start background upload immediately - don't block!
-            RhinoApp.WriteLine($"📤 Uploading in background...");
-            RhinoApp.WriteLine("💡 You can continue working - upload happens in background");
-            
-            System.Threading.Tasks.Task.Run(async () =>
-            {
-                try
-                {
-                    var result = await apiClient.UploadScreenshotAsync(
-                        settings.LastProjectId,
-                        captureData.imageBytes,
-                        imageName,
-                        captureData.metadata
-                    );
-
-                    if (result.Success)
-                    {
-                        RhinoApp.WriteLine($"✅ Quick capture upload complete!");
-                        RhinoApp.WriteLine($"📷 View at: {result.Url}");
-                    }
-                    else
-                    {
-                        RhinoApp.WriteLine($"❌ Upload failed: {result.Message}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    RhinoApp.WriteLine($"❌ Upload error: {ex.Message}");
-                }
-            });
-            
-            return Result.Success;
-        }
-        
-        private (byte[] imageBytes, Dictionary<string, object> metadata) CaptureViewportForQuickCapture(RhinoDoc doc)
-        {
-            try
-            {
-                var view = doc.Views.ActiveView;
-                if (view == null)
-                {
-                    return (null, null);
-                }
-
-                // Capture viewport as bitmap
                 var bitmap = view.CaptureToBitmap(new Size(1920, 1080));
                 
                 // Convert to byte array

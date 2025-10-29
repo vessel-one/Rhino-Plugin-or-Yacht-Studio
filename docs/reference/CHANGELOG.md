@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2025-10-29
+
+### Added
+- **Trial Tier Support**: Users on Pro Trial and Standard Trial plans now have full Rhino plugin access
+- **Trial Status Display**: Status label shows trial tier and days remaining when on active trial
+- **Trial Expiration Helper**: New `GetDaysUntilExpiration()` method to calculate trial countdown
+- **Trial Expiration Warning**: Modal dialog appears when trial has ≤3 days remaining, with 24-hour cooldown
+- **Enhanced Validation**: API validation now checks `effectiveTier` field to support trial users
+
+### Changed
+- **Subscription Tier Logic**: Now uses `effectiveTier` (trial OR base tier) instead of just `subscriptionTier`
+- **ValidationResult Model**: Added fields for trial tracking: `SubscriptionTier`, `EffectiveTier`, `TrialTier`, `TrialExpiresAt`, `HasTrialActive`
+- **Error Messages**: Simplified subscription error to "Upgrade your subscription" for clarity
+- **Refresh Projects Button**: Remains enabled even with subscription errors, allowing users to retry after upgrading
+
+### Fixed
+- **API Key Preservation**: 403 Forbidden responses now parsed to distinguish subscription vs auth errors
+- **403 Response Handling**: Checks for `INSUFFICIENT_TIER` error type and preserves API key for tier issues
+- **API Key Deletion Bug**: API key no longer deleted on subscription tier errors (only on true auth failures)
+- **Plugin Load Behavior**: API key preserved even when validation fails during plugin startup
+
+### Technical
+- **API v1.1 Compatibility**: Fully backward compatible with previous API versions
+- **Fallback Logic**: If server doesn't send new trial fields, falls back to base subscription tier
+- **Error Type Detection**: 403 responses checked for `INSUFFICIENT_TIER` and `SUBSCRIPTION_INSUFFICIENT` types
+- **Success Semantics**: `ValidationResult.Success=true` means API key valid, `HasValidSubscription` indicates access level
+
+## [1.4.0] - 2025-10-28
+
+### Added
+- **Batch Capture Queue**: Queue multiple captures for batch processing and export
+- **Image Format Settings**: Dialog to configure PNG/JPEG format and JPEG quality (1-100)
+- **Queue Manager Dialog**: View, manage, and export all queued captures with metadata
+- **Settings Access Points**: Image format button in toolbar and queue manager dialog
+
+### Fixed
+- **VesselStudioStatus Freeze**: Removed async deadlock that blocked UI thread
+- **Image Settings Dialog**: Fixed class name conflict between API key dialog and format settings
+- **Image Settings Dialog UI**: Improved padding, sizing (400x280 → 480x380), and control spacing
+- **Dialog Layout**: Added proper margins and visual hierarchy to Image Format Settings dialog
+
+### Changed
+- **Dialog Organization**: Separated API key settings from image format settings for clarity
+- **UI Polish**: Improved button sizes, control spacing, and overall dialog layout
+
 ## [1.3.0] - 2025-10-23
 
 ### Added

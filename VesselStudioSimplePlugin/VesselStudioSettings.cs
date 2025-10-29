@@ -19,6 +19,24 @@ namespace VesselStudioSimplePlugin
         public DateTime LastSubscriptionCheck { get; set; }
         public string SubscriptionErrorMessage { get; set; }
         public string UpgradeUrl { get; set; }
+        
+        // Trial tier info (API v1.1)
+        public bool HasTrialActive { get; set; }
+        public string TrialTier { get; set; }
+        public string TrialExpiresAt { get; set; }
+        public DateTime LastTrialWarningShown { get; set; } // Track when we last showed warning (show once per day)
+
+        // Image format settings (Phase 5 Group 3 Enhancement)
+        /// <summary>
+        /// Image format for captures: "jpeg" (default) or "png"
+        /// </summary>
+        public string ImageFormat { get; set; } = "png"; // Changed default to PNG for better quality
+        
+        /// <summary>
+        /// JPEG quality (1-100). Only used when ImageFormat is "jpeg".
+        /// 95 = high quality with good compression
+        /// </summary>
+        public int JpegQuality { get; set; } = 95;
 
         /// <summary>
         /// Check if subscription should be revalidated (every hour)

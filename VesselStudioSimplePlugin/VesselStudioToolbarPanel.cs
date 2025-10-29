@@ -537,11 +537,13 @@ namespace VesselStudioSimplePlugin
                 
                 if (!validation.Success)
                 {
-                    // Invalid or expired API key
+                    // API key is invalid or authentication failed - delete it
+                    // This includes: authentication errors, network failures, timeouts, etc.
                     settings.ApiKey = null;
                     settings.LastProjectId = null;
                     settings.LastProjectName = null;
                     settings.HasValidSubscription = false;
+                    settings.SubscriptionErrorMessage = null;
                     settings.Save();
                     
                     RhinoApp.WriteLine($"❌ {validation.ErrorMessage}");
@@ -567,13 +569,25 @@ namespace VesselStudioSimplePlugin
                 // Check subscription validity
                 if (!validation.HasValidSubscription)
                 {
+                    // API key is valid, but subscription tier is insufficient
+                    // Keep the API key in memory - only store that subscription is invalid
                     settings.HasValidSubscription = false;
                     settings.LastProjectId = null;
                     settings.LastProjectName = null;
-                    // Store the error message for display in UpdateStatus
+                    
+                    // Store the error message and upgrade URL for display
                     settings.SubscriptionErrorMessage = validation.ErrorDetails 
-                        ?? $"Upgrade your plan at: {validation.SubscriptionError?.UpgradeUrl ?? "https://vesselstudio.io/settings?tab=billing"}";
+                        ?? "Your plan does not include Rhino plugin access.";
                     settings.UpgradeUrl = validation.SubscriptionError?.UpgradeUrl ?? "https://vesselstudio.io/settings?tab=billing";
+                    
+                    // Store trial info if available
+                    if (validation.HasTrialActive)
+                    {
+                        settings.HasTrialActive = true;
+                        settings.TrialTier = validation.TrialTier;
+                        settings.TrialExpiresAt = validation.TrialExpiresAt;
+                    }
+                    
                     settings.Save();
                     
                     RhinoApp.WriteLine($"❌ {validation.ErrorMessage}");

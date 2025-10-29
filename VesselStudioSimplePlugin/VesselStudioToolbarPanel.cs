@@ -625,7 +625,10 @@ namespace VesselStudioSimplePlugin
                     
                     // Show warning dialog if trial expiring within 3 days (only once per day)
                     var daysRemaining = GetDaysUntilExpiration(validation.TrialExpiresAt);
-                    if (daysRemaining <= 3 && (DateTime.Now - settings.LastTrialWarningShown).TotalHours > 24)
+                    var timeSinceLastWarning = DateTime.Now - settings.LastTrialWarningShown;
+                    
+                    // Show if: expiring soon AND (never shown before OR > 24h since last shown)
+                    if (daysRemaining <= 3 && (settings.LastTrialWarningShown == DateTime.MinValue || timeSinceLastWarning.TotalHours >= 24))
                     {
                         if (InvokeRequired)
                         {

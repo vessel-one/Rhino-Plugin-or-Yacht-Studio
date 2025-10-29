@@ -691,13 +691,25 @@ namespace VesselStudioSimplePlugin
             }
             catch (Exception ex)
             {
-                // Check if it's an authentication error
-                if (ex.Message.Contains("Invalid or expired API key") || ex.Message.Contains("401") || ex.Message.Contains("403"))
+                // Check if it's a true authentication error (401 Unauthorized)
+                // Don't delete key for 403 Forbidden (subscription tier) errors
+                if (ex.Message.Contains("Invalid or expired API key") || ex.Message.Contains("401 Unauthorized"))
                 {
                     settings.ApiKey = null;
                     settings.LastProjectId = null;
                     settings.LastProjectName = null;
                     settings.HasValidSubscription = false;
+                    settings.Save();
+                    
+                    _projectComboBox.DataSource = null;
+                    _projectComboBox.Enabled = false;
+                    UpdateStatus();
+                }
+                else if (ex.Message.Contains("403 Forbidden"))
+                {
+                    // 403 means subscription tier is insufficient, NOT that key is invalid
+                    settings.HasValidSubscription = false;
+                    settings.SubscriptionErrorMessage = "Your plan does not include Rhino plugin access.";
                     settings.Save();
                     
                     _projectComboBox.DataSource = null;

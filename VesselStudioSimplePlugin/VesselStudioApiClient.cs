@@ -179,6 +179,54 @@ namespace VesselStudioSimplePlugin
                     var errorBody = await response.Content.ReadAsStringAsync();
                     RhinoApp.WriteLine($"Error response body: {errorBody}");
                     
+                    // Check if this is a 403 with subscription error details
+                    if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        try
+                        {
+                            var errorJson = JsonConvert.DeserializeObject<dynamic>(errorBody);
+                            var errorType = errorJson?.error?.ToString();
+                            
+                            // If it's INSUFFICIENT_TIER or subscription-related, the API key is still valid
+                            if (errorType == "INSUFFICIENT_TIER" || errorType == "SUBSCRIPTION_INSUFFICIENT")
+                            {
+                                var subscriptionTier = errorJson?.currentPlan?.ToString();
+                                var trialTier = errorJson?.trialPlan?.ToString();
+                                var hasTrialActive = errorJson?.trialExpiresAt != null;
+                                var trialExpiresAt = errorJson?.trialExpiresAt?.ToString();
+                                
+                                return new ValidationResult
+                                {
+                                    Success = true, // API key is valid
+                                    HasValidSubscription = false, // But subscription is insufficient
+                                    ErrorMessage = errorJson?.message?.ToString() ?? "Subscription upgrade required",
+                                    ErrorDetails = errorJson?.userMessage?.ToString() ?? errorJson?.details?.ToString(),
+                                    
+                                    // Include tier information
+                                    SubscriptionTier = subscriptionTier,
+                                    EffectiveTier = subscriptionTier,
+                                    TrialTier = trialTier,
+                                    TrialExpiresAt = trialExpiresAt,
+                                    HasTrialActive = hasTrialActive,
+                                    
+                                    SubscriptionError = new ApiErrorResponse
+                                    {
+                                        Success = false,
+                                        Error = errorType,
+                                        UserMessage = errorJson?.userMessage?.ToString(),
+                                        CurrentPlan = subscriptionTier,
+                                        UpgradeUrl = errorJson?.upgradeUrl?.ToString() ?? "https://vesselstudio.io/settings?tab=billing"
+                                    }
+                                };
+                            }
+                        }
+                        catch
+                        {
+                            // If parsing fails, treat as generic 403 error
+                        }
+                    }
+                    
+                    // For other errors (401, 404, etc.) or unparseable 403, return failure
                     return new ValidationResult
                     {
                         Success = false,

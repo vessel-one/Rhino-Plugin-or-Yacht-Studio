@@ -80,20 +80,20 @@ namespace VesselStudioSimplePlugin
                 ApiClient.SetApiKey(settings.ApiKey);
                 var result = await ApiClient.ValidateApiKeyAsync();
                 
-                // If validation completely failed (network error, timeout, user deleted, etc.)
+                // If validation completely failed (network error, timeout, 401 auth failure, etc.)
+                // Don't delete key on subscription tier errors (403) - user can upgrade
                 if (!result.Success)
                 {
-                    // Clear all cached data - force user to reconfigure
+                    // Clear cached subscription data but DON'T delete API key unless it's truly invalid
                     settings.HasValidSubscription = false;
                     settings.LastSubscriptionCheck = DateTime.MinValue;
                     settings.LastProjectId = null;
                     settings.LastProjectName = null;
-                    settings.ApiKey = null;
                     settings.SubscriptionErrorMessage = result.ErrorMessage;
                     settings.Save();
                     
                     RhinoApp.WriteLine($"Vessel Studio loaded - Authentication failed: {result.ErrorMessage}");
-                    RhinoApp.WriteLine("Please reconfigure your API key in the settings.");
+                    RhinoApp.WriteLine("Please check your connection or API key in settings.");
                     return;
                 }
                 

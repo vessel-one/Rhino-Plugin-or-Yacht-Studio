@@ -217,16 +217,18 @@ namespace VesselStudioSimplePlugin
             mainLayout.Controls.Add(_projectComboBox, 0, 4);
 
             // Row 5: Status label (projects loaded, errors, etc.)
+            // AutoSize = true allows label to grow vertically when text wraps
             _statusLabel = new Label
             {
                 Text = "Not configured",
-                Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = Color.FromArgb(100, 100, 100),
                 Margin = new Padding(0, 0, 0, 10),
-                AutoSize = false,
+                AutoSize = true, // Allow vertical growth for text wrapping
+                MaximumSize = new Size(0, 0), // Will be set dynamically on resize
                 TextAlign = ContentAlignment.TopLeft,
-                BackColor = Color.FromArgb(248, 249, 250) // Solid background matching parent
+                BackColor = Color.FromArgb(248, 249, 250), // Solid background matching parent
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             mainLayout.Controls.Add(_statusLabel, 0, 5);
             _statusLabel.BringToFront();
@@ -350,6 +352,19 @@ namespace VesselStudioSimplePlugin
 #endif
             };
             mainLayout.Controls.Add(aboutLink, 0, 12);
+            
+            // Handle resize to update status label MaximumSize for text wrapping
+            this.Resize += (s, e) => UpdateStatusLabelWidth();
+        }
+        
+        private void UpdateStatusLabelWidth()
+        {
+            if (_statusLabel != null && this.Width > 0)
+            {
+                // Set MaximumSize width to panel width minus padding (30px total)
+                // Height = 0 means unlimited vertical growth (allows text wrapping)
+                _statusLabel.MaximumSize = new Size(this.Width - 30, 0);
+            }
         }
 
         private void OnSettingsClick(object sender, EventArgs e)
@@ -838,6 +853,9 @@ namespace VesselStudioSimplePlugin
                     _captureButton.Enabled = false;
                     _refreshProjectsButton.Enabled = true;
                 }
+                
+                // Update label width for text wrapping
+                UpdateStatusLabelWidth();
             }
             catch
             {

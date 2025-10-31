@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Command Output**: Removed verbose debug logs from Rhino command bar for cleaner UX
+- **API Logging**: Removed connection, authorization, and response body debug logs
+- **Upload Logging**: Removed detailed upload progress logs from command bar
+
+### Fixed
+- **Async Freeze**: Fixed Rhino freeze when clicking "Refresh Projects" button by properly awaiting async operations
+- **HTTP Timeout**: Reduced API timeout from 30s to 10s for faster failure detection and better responsiveness
+
 ## [1.5.0] - 2025-10-29
 
 ### Added

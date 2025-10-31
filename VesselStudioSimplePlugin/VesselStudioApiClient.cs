@@ -94,18 +94,11 @@ namespace VesselStudioSimplePlugin
 
             try
             {
-                RhinoApp.WriteLine($"Attempting connection to: {BaseUrl}/api/rhino/validate");
-                RhinoApp.WriteLine($"Authorization: Bearer {_apiKey.Substring(0, Math.Min(10, _apiKey.Length))}...");
-                
                 var response = await _httpClient.PostAsync("/api/rhino/validate", null);
-                
-                RhinoApp.WriteLine($"Response status: {(int)response.StatusCode} {response.StatusCode}");
                 
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
-                    RhinoApp.WriteLine($"Response body: {json}");
-                    
                     var result = JsonConvert.DeserializeObject<dynamic>(json);
                     
                     // Extract tier information
@@ -178,7 +171,6 @@ namespace VesselStudioSimplePlugin
                 else
                 {
                     var errorBody = await response.Content.ReadAsStringAsync();
-                    RhinoApp.WriteLine($"Error response body: {errorBody}");
                     
                     // Check if this is a 403 with subscription error details
                     if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -367,17 +359,12 @@ namespace VesselStudioSimplePlugin
 
                     // POST to upload endpoint - Content-Type header is automatically set by MultipartFormDataContent
                     var uploadUrl = $"/api/rhino/projects/{projectId}/upload";
-                    RhinoApp.WriteLine($"[Upload] POST {BaseUrl}{uploadUrl}");
-                    RhinoApp.WriteLine($"[Upload] Authorization: Bearer {_apiKey.Substring(0, 12)}...");
                     
                     var response = await _httpClient.PostAsync(uploadUrl, formData);
                     var responseText = await response.Content.ReadAsStringAsync();
                     
-                    RhinoApp.WriteLine($"[Upload] Response: {(int)response.StatusCode} {response.StatusCode}");
-                    
                     if (response.IsSuccessStatusCode)
                     {
-                        RhinoApp.WriteLine($"[Upload] ✅ Success: {responseText}");
                         var result = JsonConvert.DeserializeObject<dynamic>(responseText);
                         return new UploadResult 
                         { 
@@ -388,7 +375,6 @@ namespace VesselStudioSimplePlugin
                     }
                     else
                     {
-                        RhinoApp.WriteLine($"[Upload] ❌ Failed: {responseText}");
                         return new UploadResult 
                         { 
                             Success = false, 

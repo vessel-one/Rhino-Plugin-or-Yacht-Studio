@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <AssemblyName>VesselStudioSimplePlugin</AssemblyName>
     <RootNamespace>VesselStudioSimplePlugin</RootNamespace>
-    <Version>1.5.0</Version>
+    <Version>1.6.0</Version>
     <Title>Vessel Studio Simple Plugin</Title>
     <Description>Simple Rhino plugin for capturing viewport and uploading to Vessel Studio</Description>
     <Authors>VesselOne</Authors>

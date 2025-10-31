@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2025-10-31
+
 ### Changed
 - **Command Output**: Removed verbose debug logs from Rhino command bar for cleaner UX
 - **API Logging**: Removed connection, authorization, and response body debug logs

@@ -52,7 +52,8 @@ namespace VesselStudioSimplePlugin
         {
             _httpClient = new HttpClient();
             _httpClient.BaseAddress = new Uri(BaseUrl);
-            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            // Reduced timeout to prevent long UI freezes
+            _httpClient.Timeout = TimeSpan.FromSeconds(10);
             
             // Load saved API key
             LoadApiKey();

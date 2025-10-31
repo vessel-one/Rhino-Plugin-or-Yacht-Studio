@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Rhino;
 using Rhino.Commands;
@@ -44,7 +45,8 @@ namespace VesselStudioSimplePlugin
             
             InitializeComponents();
             UpdateStatus();
-            LoadProjectsAsync();
+            // Fire-and-forget: Load projects in background without blocking constructor
+            _ = LoadProjectsAsync();
 
             // T022-T024: Subscribe to queue events for badge updates
             CaptureQueueService.Current.ItemAdded += OnQueueItemAdded;
@@ -383,8 +385,8 @@ namespace VesselStudioSimplePlugin
                 {
                     RhinoApp.WriteLine("✅ Settings saved successfully");
                     UpdateStatus();
-                    // Reload projects after settings change
-                    LoadProjectsAsync();
+                    // Reload projects after settings change (fire-and-forget)
+                    _ = LoadProjectsAsync();
                 }
             }
         }
@@ -404,9 +406,15 @@ namespace VesselStudioSimplePlugin
             }
         }
 
-        private void OnRefreshProjectsClick(object sender, EventArgs e)
+        private async void OnRefreshProjectsClick(object sender, EventArgs e)
         {
-            LoadProjectsAsync();
+            // Show loading state immediately
+            _projectLabel.Text = "⏳ Loading...";
+            _projectLabel.ForeColor = Color.Gray;
+            _refreshProjectsButton.Enabled = false;
+            
+            // Run async to prevent UI freeze
+            await LoadProjectsAsync();
         }
 
         private void OnCaptureClick(object sender, EventArgs e)
@@ -534,22 +542,32 @@ namespace VesselStudioSimplePlugin
             }
         }
 
-        private async void LoadProjectsAsync()
+        private async Task LoadProjectsAsync()
         {
             var settings = VesselStudioSettings.Load();
             if (string.IsNullOrEmpty(settings?.ApiKey))
             {
-                _projectComboBox.Enabled = false;
-                _projectComboBox.DataSource = null;
-                _refreshProjectsButton.Enabled = false;
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() => {
+                        _projectComboBox.Enabled = false;
+                        _projectComboBox.DataSource = null;
+                        _refreshProjectsButton.Enabled = false;
+                    }));
+                }
+                else
+                {
+                    _projectComboBox.Enabled = false;
+                    _projectComboBox.DataSource = null;
+                    _refreshProjectsButton.Enabled = false;
+                }
                 return;
             }
 
             try
             {
-                _projectLabel.Text = "⏳ Loading...";
-                _projectLabel.ForeColor = Color.Gray;
-                _refreshProjectsButton.Enabled = false;
+                // UI state already set by caller (OnRefreshProjectsClick)
+                // Don't set it again here to avoid flicker
                 
                 var apiClient = new VesselStudioApiClient();
                 apiClient.SetApiKey(settings.ApiKey);
